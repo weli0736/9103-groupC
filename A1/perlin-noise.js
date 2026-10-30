@@ -12,14 +12,23 @@ const CLOUD_PULL = 0.12;        // 吸回线上的力度（越大贴得越紧）
 const CLOUD_GRACE = 8;          // 离线很快就重生
 const CLOUD_THRESHOLD = 100;
 
-// ★ Perlin noise 参数
-const CLOUD_NOISE_SCALE = 0.01;   // noise 的空间尺度（越小摆动越平缓）
-const CLOUD_NOISE_SPEED = 0.005;  // noise 随时间变化的速度
-const CLOUD_NOISE_TURN = 0.08;    // 每帧最大摆动角度（越大越飘）
+// ★ Perlin noise 参数（粒子摆动，原有的，没动）
+const CLOUD_NOISE_SCALE = 0.01;
+const CLOUD_NOISE_SPEED = 0.005;
+const CLOUD_NOISE_TURN = 0.08;
 
 const CLOUD_ALPHA = 70;
 const CLOUD_WEIGHT = 4;
 const CLOUD_COUNT = 1200;
+
+// ★★★ 新增：雾层参数 ★★★
+// 雾是一片缓慢漂移的 Perlin noise 浓度场：
+// 浓的地方云纹显现，稀的地方云纹隐去，像雾气在天界滚动
+const FOG_SCALE = 0.004;    // 雾团的空间尺度（越小雾团越大块）
+const FOG_SPEED = 0.002;    // 雾漂移速度（越大显隐变化越快）
+const FOG_LOW = 0.35;       // 浓度低于这个值 → 完全隐去
+const FOG_HIGH = 0.65;      // 浓度高于这个值 → 完全显现
+                            // 两者之间平滑过渡；想显隐对比更"硬"就把两个值靠近
 
 const CLOUD_PALETTE = [
   [196, 160, 98],   // 鎏金
@@ -101,6 +110,19 @@ class Part1 {
     let gx = this.brightnessAt(x + d, y) - this.brightnessAt(x - d, y);
     let gy = this.brightnessAt(x, y + d) - this.brightnessAt(x, y - d);
     return createVector(gx, gy);
+  }
+
+  // ★★★ 新增：读取某位置的雾层浓度，返回 0（全隐）~ 1（全显） ★★★
+  // 用一条独立的 noise 维度（+1000 偏移），避免和粒子摆动的 noise 串台
+  fogDensityAt(x, y) {
+    let n = noise(
+      x * FOG_SCALE + 1000,
+      y * FOG_SCALE + 1000,
+      frameCount * FOG_SPEED
+    );
+    // 把 FOG_LOW ~ FOG_HIGH 之间映射成 0~1，外侧截断，中间平滑
+    let t = constrain((n - FOG_LOW) / (FOG_HIGH - FOG_LOW), 0, 1);
+    return t * t * (3 - 2 * t); // smoothstep，过渡更柔
   }
 
   update() {
@@ -228,8 +250,13 @@ class CloudDot {
   }
 
   draw(pg) {
+    // ★★★ 新增：读取雾层浓度，决定这一笔显不显 ★★★
+    let fog = this.parent.fogDensityAt(this.pos.x, this.pos.y);
+    if (fog <= 0.01) return; // 雾太稀 → 直接不画，粒子照常运动（位置不受影响）
+
     let w = map(this.life, 0, this.maxLife, 0.3, CLOUD_WEIGHT);
-    pg.stroke(this.col);
+    // 用雾浓度缩放透明度，替代原来固定的 CLOUD_ALPHA
+    pg.stroke(red(this.col), green(this.col), blue(this.col), CLOUD_ALPHA * fog);
     pg.strokeWeight(w);
     pg.line(this.prev.x, this.prev.y, this.pos.x, this.pos.y);
   }
