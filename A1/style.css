@@ -1,10 +1,6 @@
-html, body {
-  margin: 0;
-  padding: 0;
-  overflow: hidden; /* 隐藏滚动条 */
-  background-color: #1e1914; /* 深色背景 */
-}
-
-canvas {
-  display: block; /* 移除画布底部的默认空白 */
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
 }
