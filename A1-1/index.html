@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>马王堆T型帛画 团队项目</title>
+  <!-- 引入 p5.js 核心库 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #1a1512; /* 深色背景，让画卷更突出 */
+    }
+  </style>
+</head>
+<body>
+  <!-- 团队成员的独立模块文件，必须放在 sketch.js 前面 -->
+  <!-- 即使这些文件现在还是空的或者还没创建，放在这里也不会报错 -->
+  <script src="perlin-noise.js"></script>
+  <script src="part2.js"></script>
+  <script src="part3.js"></script>
+  <script src="part4.js"></script>
+
+  <!-- 窗口跟随鼠标移动 + 根据窗口位置切换音乐 -->
+  <script src="audio-change.js"></script>
+
+  <!-- 主控制文件最后引入 -->
+  <script src="sketch.js"></script>
+</body>
+</html>
