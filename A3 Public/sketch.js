@@ -22,9 +22,10 @@ function setup() {
   imgRatio = bgImg.width / bgImg.height; 
   calculateCanvasSize();
   createCanvas(canvasWidth, canvasHeight);
+  frameRate(60);
   smooth();
   
-  // TODO: 如果 Yuanze 的音频机制需要在这里加载声音或者 setup，可以写在这里
+  setupAudioChange();
 }
 
 function draw() {
@@ -32,6 +33,7 @@ function draw() {
   if (millis() - lastActiveTime > idleThreshold) {
     isIdle = true;
   }
+  updateMusic();
   
   // 刷新背景底色
   background(40, 32, 28); 
@@ -85,6 +87,7 @@ function draw() {
   // ==========================================
   // 处于最高层，响应点击与滑动，绘制提灯光晕
   drawJunyuInput(isIdle, mouseX, mouseY);
+  drawMusicHint();
 }
 
 // ==========================================
@@ -95,9 +98,10 @@ function mouseMoved() {
   isIdle = false;
 }
 function mousePressed() {
+  if (!YuanzeAudio.isBellHit(mouseX, mouseY)) return;
   lastActiveTime = millis();
   isIdle = false;
-  // TODO: Junyu/Yuanze 可以在这里触发声音播放 (Resonance 共鸣阶段)
+  // 声音切换由 audio-change.js 的画布 click 监听统一处理。
 }
 
 
@@ -123,10 +127,8 @@ function drawKristenFog(idleState, mx, my) {
 
 // 🎵 Yuanze (音频) - 中央双龙
 function drawYuanzeDragons(idleState) {
-  push();
-  // TODO: Yuanze, 在这里绘制中心位置的双龙，并处理音频接收
-  // 提示：if(idleState) 时龙是灰白的；发声时通过 getLevel() 缩放和 rotate() 龙
-  pop();
+  YuanzeAudio.setIdle(idleState);
+  drawHeavenDragons();
 }
 
 // 🖱️ Junyu (用户输入) - 鼠标提灯
