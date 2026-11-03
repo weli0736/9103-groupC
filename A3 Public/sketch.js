@@ -97,6 +97,12 @@ function mousePressed() {
   lastActiveTime = millis();
   isIdle = false;
 }
+// [Kristen 新增] 按住鼠标拖动时 p5 不触发 mouseMoved，
+// 不加这个的话，拖动超过 10 秒会被判成 idle，雾会合拢
+function mouseDragged() {
+  lastActiveTime = millis();
+  isIdle = false;
+}
 
 // ==========================================
 // ⬇️ 组员开发接口区 (Placeholders) ⬇️
