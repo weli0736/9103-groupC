@@ -1,3 +1,4 @@
+
 html, body {
   margin: 0;
   padding: 0;
@@ -5,7 +6,9 @@ html, body {
 
 canvas {
   display: block;
+  cursor: none;
 }
+
 #audio-story-hint {
   position: fixed;
   left: 50%;
