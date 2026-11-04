@@ -1,220 +1,253 @@
-// ============================================
-// sketch.js —— 团队共用的基础框架（白色平台重叠版）
-// 大家不要在这个文件里写自己的功能代码！
-// 每个人的代码写在自己的 part1.js ~ part4.js 里
-// ============================================
+// ==========================================
+// IDEA9103 - Awakening Heaven (Team Main Framework)
+// Lead/Time-base: Haocheng Gong
+// ==========================================
 
-// ---------- 三张共用图片 ----------
-let bgImg;          // 背景图（铺满整个画布）
-let earthImg;       // 人间图
-let undergroundImg; // 地下图
+let bgBase, bgElements; 
+let imgRatio = 1; 
+let canvasWidth, canvasHeight;
 
-// ---------- 图片加载状态记录（用于自动排错） ----------
-// 'loading' = 加载中, 'ok' = 成功, 'fail' = 失败
-let bgStatus = 'loading';
-let earthStatus = 'loading';
-let undergroundStatus = 'loading';
-
-// ---------- 四个人的模块实例 ----------
-let part1, part2, part3, part4;
-
-// ============================================
-// 布局设置（想微调就改这几个数字）
-// ============================================
-
-// 画布高度 = 窗口高度 × 这个倍数（越大画布越长，页面可以滚动）
-const CANVAS_HEIGHT_MULTIPLIER = 2.5;
-
-// 顶部留空比例：画布最上方 30% 留给"天上（Heaven）"
-// （现在 earth 不再由这条线决定位置，这个值只用来提示 Heaven 的绘制区域）
-const HEAVEN_RATIO = 0.30;
-
-// ★★★ 重叠微调旋钮 ★★★
-// overlapOffset = earth 和 underground 重叠的像素数
-// 改大 = 重叠更多（earth 往下压进 underground）
-// 改小 = 重叠更少
-// 改成 0 = 两张图只是贴在一起，不重叠
-// 你可以一次改 10~20 慢慢试，直到两个白色平台完全重合
-let overlapOffset = 270;
-
-// ★★★ 上下留白 ★★★（单位：像素，背景图不受影响，仍然铺满整个画布）
-// MARGIN_BOTTOM：underground 底边离画布最底端的距离（改大 = 三个部分整体上移更多）
-// MARGIN_TOP：Heaven 区域上方留出的空白（Heaven 的内容建议画在 heavenTop 以下）
-const MARGIN_TOP = 200;
-const MARGIN_BOTTOM = 200;
-
-// 三个区域的位置（每帧在 draw() 里更新），组员画画时可以直接用：
-// heavenTop ~ earthTop 是天上，earthTop ~ underTop 是人间，underTop ~ underBottom 是地下
-let heavenTop = MARGIN_TOP;
-let earthTop = 0;
-let underTop = 0;
-let underBottom = 0;
+let lastActiveTime = 0;
+let isIdle = true;       
+let idleThreshold = 10000; 
 
 function preload() {
-  // 每张图都带成功/失败的回调，失败也不会让程序崩溃
-  bgImg = loadImage(
-    'photo/background.png',
-    function () { bgStatus = 'ok'; },
-    function () { bgStatus = 'fail'; }
-  );
-
-  earthImg = loadImage(
-    'photo/earth.png',
-    function () { earthStatus = 'ok'; },
-    function () { earthStatus = 'fail'; }
-  );
-
-  undergroundImg = loadImage(
-    'photo/underground.png',
-    function () { undergroundStatus = 'ok'; },
-    function () { undergroundStatus = 'fail'; }
-  );
+  // [路径修正] 图片在 photo 文件夹里；找不到时控制台会提示
+  bgBase = loadImage('photo/bg1.png', null,
+    () => console.error('找不到 photo/bg1.png，检查文件名和路径'));
+  bgElements = loadImage('photo/bg2.png', null,
+    () => console.error('找不到 photo/bg2.png，检查文件名和路径'));
 }
 
 function setup() {
-  // ---------- 画布尺寸 ----------
-  // 宽度：最大 800px，跟随窗口宽度
-  // 高度：窗口高度 × 1.8 → 页面可以向下滚动
-  let canvasW = min(windowWidth, 800);
-  let canvasH = windowHeight * CANVAS_HEIGHT_MULTIPLIER;
-
-  let cnv = createCanvas(canvasW, canvasH);
-  cnv.style('display', 'block');
-  cnv.style('margin', '0 auto');
-
-  // ---------- 实例化四个人的模块 ----------
-  // typeof 检查的作用：就算某个组员的文件还没写完或没提交，
-  // 整个程序也不会报错崩溃，其他人的部分照常运行
-  part1 = typeof Part1 !== 'undefined' ? new Part1() : null;
-  part2 = typeof Part2 !== 'undefined' ? new Part2() : null;
-  part3 = typeof Part3 !== 'undefined' ? new Part3() : null;
-  part4 = typeof Part4 !== 'undefined' ? new Part4() : null;
-
-  // ---------- 窗口移动、点击声音和双龙反馈（audio-change.js） ----------
-  if (typeof setupAudioChange === 'function') setupAudioChange();
+  imgRatio = bgBase.width / bgBase.height; 
+  calculateCanvasSize();
+  createCanvas(canvasWidth, canvasHeight);
+  smooth();
 }
 
 function draw() {
-  // 根据鼠标位置移动窗口（audio-change.js）
-  if (typeof updateMouseScroll === 'function') updateMouseScroll();
-  if (typeof updateMusic === 'function') updateMusic();
-  background(240, 235, 225);
-
-  // ========== 第一层：三张共用图片 ==========
-  // 绘制顺序：先背景 → 再人间 → 最后地下
-  // 后画的在上层，所以背景绝对不会盖住另外两张
-
-  // 1. 背景图：铺满整个画布
-  if (bgStatus === 'ok' && bgImg.width > 0) {
-    image(bgImg, 0, 0, width, height);
-  } else {
-    drawErrorBox(0, 0, width, height,
-      'background.png 加载失败!\n请检查: photo/background.png');
+  // 1. 全局状态检测
+  if (millis() - lastActiveTime > idleThreshold) {
+    isIdle = true;
   }
+  
+  background(40, 32, 28); 
 
-  // ---------- 布局计算 ----------
+  // ==========================================
+  // 【图层 1】：最底层的纯背景肌理
+  // ==========================================
+  blendMode(BLEND); 
+  image(bgBase, 0, 0, width, height);
 
-  // 天上（Heaven）区域：从顶部留白下方开始，到 height × 0.30
-  // 这里故意什么都不画，留给之后的 Heaven 部分
-  let heavenBottom = MARGIN_TOP + height * HEAVEN_RATIO;
+  // ==========================================
+  // 【图层 2】：夹在中间的祥云 (Kristen - Perlin Noise)
+  // ==========================================
+  drawKristenClouds(isIdle);
 
-  // ---------- 第一步：先算 underground 的位置 ----------
-  // 宽 = 画布宽度，高 = 按图片原始比例算出来
-  // underY = 画布高度 - 底部留白 - 图片显示高度 → 底边离画布底端 MARGIN_BOTTOM 像素
-  let underBottomY = height - MARGIN_BOTTOM;
-  let underH = 0;
-  let underY = underBottomY; // 如果图片加载失败，就当它的顶边在底部留白的上方
-  if (undergroundStatus === 'ok' && undergroundImg.width > 0) {
-    underH = width * (undergroundImg.height / undergroundImg.width);
-    underY = underBottomY - underH;
-  }
+  // ==========================================
+  // 【图层 3】：前景元素图 (日月、树木、天钟)
+  // ==========================================
+  push();
+  blendMode(BLEND); 
+  // 【亮度修正】：调高到 210，让整张图亮堂起来，告别死黑，同时保留光效质感
+  tint(210); 
+  image(bgElements, 0, 0, width, height);
+  pop();
+  
+  // ==========================================
+  // 【图层 4】：底部工笔海浪 (Haocheng - Time Base)
+  // ==========================================
+  let loopDuration = 10000; 
+  let cycleProgress = (millis() % loopDuration) / loopDuration; 
+  drawStylizedWaves(cycleProgress);
 
-  // ---------- 第二步：把 earth 挂在 underground 上面 ----------
-  // ★ 核心公式 ★
-  // earthY = underground顶边 - earth的高度 + 重叠像素数
-  // 这样 earth 的底边会压进 underground 顶部 overlapOffset 像素
-  // → 两个白色平台就能叠在一起，而且窗口大小变了也不会分开
-  let earthH = 0;
-  let earthY = heavenBottom; // 图片加载失败时的备用位置
-  if (earthStatus === 'ok' && earthImg.width > 0) {
-    earthH = width * (earthImg.height / earthImg.width);
-    earthY = underY - earthH + overlapOffset;
-  }
+  // ==========================================
+  // 【图层 5】：中央空白区的神龙 (Yuanze - Audio)
+  // ==========================================
+  drawYuanzeDragons(isIdle);
 
-  // 把三个区域的位置同步给全局变量，方便组员使用
-  heavenTop = MARGIN_TOP;
-  earthTop = earthY;
-  underTop = underY;
-  underBottom = underBottomY;
+  // ==========================================
+  // 【图层 6】：天界发光机制 (Haocheng - Time Base)
+  // ==========================================
+  let moonIntensity = cycleProgress < 0.5 ? sin(map(cycleProgress, 0, 0.5, 0, 1) * PI) : 0;
+  let sunIntensity = cycleProgress >= 0.5 ? sin(map(cycleProgress, 0.5, 1.0, 0, 1) * PI) : 0;
+  let bellIntensity = moonIntensity + sunIntensity;
 
-  // 2. 画人间图（earth）
-  if (earthStatus === 'ok' && earthImg.width > 0) {
-    image(earthImg, 0, earthY, width, earthH);
-  } else {
-    drawErrorBox(0, heavenBottom, width, height * 0.2,
-      'earth.png 加载失败!\n请检查: photo/earth.png\n(注意后缀是不是 .jpg? 大小写对吗?)');
-  }
+  if (moonIntensity > 0.01) drawMoonSystem(moonIntensity);
+  if (sunIntensity > 0.01) drawSunSystem(sunIntensity);
+  if (bellIntensity > 0.01) drawBellHaloGlow(bellIntensity);
 
-  // 3. 画地下图（underground）：底边离画布最底端 MARGIN_BOTTOM 像素
-  // 注意：underground 在 earth 之后画，所以重叠的部分由 underground 盖在上层
-  if (undergroundStatus === 'ok' && undergroundImg.width > 0) {
-    image(undergroundImg, 0, underY, width, underH);
-  } else {
-    drawErrorBox(0, underBottomY - height * 0.15, width, height * 0.15,
-      'underground.png 加载失败!\n请检查: photo/underground.png\n(注意后缀是不是 .jpg? 大小写对吗?)');
-  }
+  // ==========================================
+  // 【图层 7】：最顶层的厚重迷雾 (Kristen - Perlin Noise)
+  // ==========================================
+  drawKristenFog(isIdle, mouseX, mouseY);
 
-  // ========== 第二层：四个人的模块，按顺序调用 ==========
-  // 每个模块必须有 update() 和 display() 两个方法
-  // 提示：负责"天上（Heaven）"的同学，可以把内容画在
-  // y = heavenTop 到 y = earthTop 这个区域里（上面 MARGIN_TOP 像素是留白）
-
-  if (part1) {
-    part1.update();
-    part1.display();
-  }
-
-  if (part2) {
-    part2.update();
-    part2.display();
-  }
-
-  // 双龙后于云雾绘制：使用 perlin-noise.js 或 perlin-noise2.js 时均在云层上方。
-  if (typeof drawHeavenDragons === 'function') drawHeavenDragons();
-
-  if (part3) {
-    part3.update();
-    part3.display();
-  }
-
-  if (part4) {
-    part4.update();
-    part4.display();
-  }
-
-  // 显示点击声音/当前阶段提示（audio-change.js）
-  if (typeof drawMusicHint === 'function') drawMusicHint();
+  // ==========================================
+  // 【图层 8】：全屏鼠标交互与提灯 (Junyu - User Input)
+  // ==========================================
+  drawJunyuInput(isIdle, mouseX, mouseY);
 }
 
-// ---------- 自动排错工具：画一个红色提示框 ----------
-// 哪张图片加载失败，画面上就会出现红框和文字提示
-function drawErrorBox(x, y, w, h, msg) {
-  push();
-  fill(255, 0, 0, 40);
-  stroke(255, 0, 0);
-  strokeWeight(2);
-  rect(x + 5, y + 5, w - 10, h - 10);
+// ==========================================
+// 全局交互监听
+// ==========================================
+function mouseMoved() {
+  lastActiveTime = millis();
+  isIdle = false;
+}
+function mousePressed() {
+  lastActiveTime = millis();
+  isIdle = false;
+}
+// [Kristen 新增] 按住鼠标拖动时 p5 不触发 mouseMoved，
+// 不加这个的话，拖动超过 10 秒会被判成 idle，雾会合拢
+function mouseDragged() {
+  lastActiveTime = millis();
+  isIdle = false;
+}
 
-  noStroke();
-  fill(200, 0, 0);
-  textAlign(CENTER, CENTER);
-  textSize(16);
-  text(msg, x + w / 2, y + h / 2);
+// ==========================================
+// ⬇️ 组员开发接口区 (Placeholders) ⬇️
+// ==========================================
+// Kristen 的两个函数会被 perlin-noise.js 覆盖（所以 perlin-noise.js 要后加载）
+function drawKristenClouds(idleState) { push(); pop(); }
+function drawKristenFog(idleState, mx, my) { push(); pop(); }
+function drawYuanzeDragons(idleState) { push(); pop(); }
+function drawJunyuInput(idleState, mx, my) { push(); pop(); }
+
+
+// ==========================================
+// ⬇️ Haocheng 时间机制区 (坐标完美对齐版) ⬇️
+// ==========================================
+function drawMoonSystem(intensity) {
+  push();
+  blendMode(ADD); 
+  // 月亮主光
+  drawBigGlow(width * 0.115, height * 0.16, width * 0.25, 240, 250, 255, intensity);
+  
+  let mColor = [240, 250, 255]; 
+  // 【修正】：加大果实的光晕半径，确保完全照亮
+  let r = width * 0.095; 
+  
+  // 【修正】：重新精确测算的 6 颗银色果实坐标，死死对准每一个果实
+  drawBigGlow(width * 0.285, height * 0.115, r, mColor[0], mColor[1], mColor[2], intensity); // 右上 1
+  drawBigGlow(width * 0.355, height * 0.155, r, mColor[0], mColor[1], mColor[2], intensity); // 右上 2
+  drawBigGlow(width * 0.130, height * 0.350, r, mColor[0], mColor[1], mColor[2], intensity); // 中左 1
+  drawBigGlow(width * 0.050, height * 0.430, r, mColor[0], mColor[1], mColor[2], intensity); // 中左 2
+  drawBigGlow(width * 0.185, height * 0.480, r, mColor[0], mColor[1], mColor[2], intensity); // 右下 1
+  drawBigGlow(width * 0.245, height * 0.550, r, mColor[0], mColor[1], mColor[2], intensity); // 右下 2
   pop();
 }
 
+function drawSunSystem(intensity) {
+  push();
+  blendMode(ADD);
+  // 太阳主光
+  drawBigGlow(width * 0.905, height * 0.145, width * 0.25, 255, 50, 20, intensity);
+  
+  let sColor = [255, 50, 20]; 
+  let r = width * 0.095; // 同步加大红果光晕
+  
+  // 7 颗红色果实精确坐标
+  drawBigGlow(width * 0.725, height * 0.105, r, sColor[0], sColor[1], sColor[2], intensity);
+  drawBigGlow(width * 0.655, height * 0.175, r, sColor[0], sColor[1], sColor[2], intensity);
+  drawBigGlow(width * 0.695, height * 0.280, r, sColor[0], sColor[1], sColor[2], intensity);
+  drawBigGlow(width * 0.825, height * 0.275, r, sColor[0], sColor[1], sColor[2], intensity);
+  drawBigGlow(width * 0.935, height * 0.380, r, sColor[0], sColor[1], sColor[2], intensity);
+  drawBigGlow(width * 0.785, height * 0.525, r, sColor[0], sColor[1], sColor[2], intensity);
+  drawBigGlow(width * 0.855, height * 0.575, r, sColor[0], sColor[1], sColor[2], intensity);
+  pop();
+}
+
+function drawBigGlow(x, y, maxRadius, r, g, b, intensity) {
+  noStroke();
+  let layers = 6; 
+  let step = maxRadius / layers;
+  for (let i = maxRadius; i > 0; i -= step) {
+    let progress = 1 - (i / maxRadius); 
+    let alpha = pow(progress, 2) * 100 * intensity; 
+    fill(r, g, b, alpha);
+    ellipse(x, y, i, i);
+  }
+}
+
+function drawBellHaloGlow(intensity) {
+  push();
+  blendMode(ADD); 
+  let bellX = width * 0.5;
+  let bellY = height * 0.15; 
+  noFill(); 
+  let innerDiameter = width * 0.05;  
+  let outerDiameter = width * 0.18;  
+  let layers = 15; 
+  let step = (outerDiameter - innerDiameter) / layers;
+  for (let i = 0; i < layers; i++) {
+    let d = innerDiameter + i * step;
+    let progress = i / (layers - 1);
+    let alpha = sin(progress * PI) * 25 * intensity;
+    stroke(255, 215, 100, alpha); 
+    strokeWeight(step * 1.5); 
+    ellipse(bellX, bellY, d, d * 0.75); 
+  }
+  pop();
+}
+
+function drawStylizedWaves(cycle) {
+  push();
+  let phase = cycle * TWO_PI; 
+  let waveColors = [
+    color(68, 55, 45, 200), color(105, 125, 105, 230), 
+    color(150, 125, 90, 240), color(140, 75, 55, 255)    
+  ];
+  for (let i = 0; i < 4; i++) {
+    let yBase = height - (4 - i) * (height * 0.04); 
+    let amp = height * 0.04 + i * 2; 
+    let freq = 0.012 - i * 0.001; 
+    let dir = (i % 2 === 0) ? 1 : -1;
+    
+    fill(waveColors[i]);
+    stroke(25, 20, 15); 
+    strokeWeight(3.5);
+    beginShape();
+    vertex(0, height); 
+    for (let x = 0; x <= width; x += 15) { 
+      let yOffset = sin(x * freq + phase * dir + i * 2) * amp;
+      let yOffset2 = cos(x * freq * 1.5 - phase * dir) * (amp * 0.3);
+      vertex(x, yBase + yOffset + yOffset2);
+    }
+    vertex(width, height); 
+    endShape(CLOSE);
+
+    noFill();
+    stroke(30, 25, 20, 180); 
+    strokeWeight(1.5);
+    let innerLinesCount = 3 + i; 
+    for (let j = 1; j <= innerLinesCount; j++) {
+      let lineSpacing = j * 10; 
+      beginShape();
+      for (let x = 0; x <= width; x += 15) {
+        let yOffset = sin(x * freq + phase * dir + i * 2) * amp;
+        let yOffset2 = cos(x * freq * 1.5 - phase * dir) * (amp * 0.3);
+        let waveY = yBase + yOffset + yOffset2 + lineSpacing;
+        if (waveY <= height + 10) vertex(x, waveY);
+      }
+      endShape();
+    }
+  }
+  pop();
+}
+
+function calculateCanvasSize() {
+  canvasWidth = windowWidth * 0.95; 
+  canvasHeight = canvasWidth / imgRatio;
+  if (canvasHeight > windowHeight * 0.95) {
+    canvasHeight = windowHeight * 0.95;
+    canvasWidth = canvasHeight * imgRatio;
+  }
+}
+
 function windowResized() {
-  let canvasW = min(windowWidth, 800);
-  let canvasH = windowHeight * CANVAS_HEIGHT_MULTIPLIER;
-  resizeCanvas(canvasW, canvasH);
+  calculateCanvasSize();
+  resizeCanvas(canvasWidth, canvasHeight);
 }

@@ -1,374 +1,488 @@
-// ==========================================
-// IDEA9103 - Awakening Heaven
-// Part 1: Heavenly Fog & Xiangyun Clouds (Kristen)
-// Hooks into sketch.js: drawKristenClouds(), drawKristenFog()
-// Reads from main framework: isIdle (Haocheng), width, height, mouseX, mouseY
-// Load this file AFTER sketch.js so these functions replace the empty placeholders.
-// ==========================================
+// =============================================================
+//  perlin-noise.js · Kristen · Heavenly Cloud Layer (Part1)
+//  ① Moon-white fog: full-screen Perlin noise fog.
+//     Mouse movement → fog slowly clears. isIdle → fog closes again.
+//  ② Cloud pattern: original CloudDot effect (full screen),
+//     generated from cloud.png. Shows up once the fog clears.
+//  Framework hookup (Haocheng):
+//    drawKristenClouds() → Layer 2 (above bg1, below bg2)
+//    drawKristenFog()    → Layer 7 (above sun/moon glow, below lantern)
+//  In index.html, this file MUST load after sketch.js.
+// =============================================================
 
-// ---------- Config: all tuning values live here ----------
+
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+//  SETTINGS — you normally only need to edit this section
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+// ===== ① Fog settings =====
 const P1_FOG = {
-  CELL: 8,                  // fog grid size in px. Bigger = faster, softer
-  NOISE_SCALE: 0.0025,      // noise zoom, per px
-  WARP: 3.0,                // domain warp strength
-  DRIFT: 0.00005,           // fog drift speed, per ms
-  LIGHT: [238, 230, 214],   // warm moon-white (thick parts)
-  SHADOW: [190, 178, 160],  // thinner parts, a little darker
-  ALPHA_MAX: 235,           // 0-255, opacity of the thickest fog
-  ALPHA_MIN: 0.6,           // thinnest fog = ALPHA_MAX * this
-  BREATH: 0.05,             // slow breathing while idle
-  BRUSH: 0.09,              // reveal radius, ratio of canvas width
-  TEAR: 0.45,               // ragged edge amount, 0-1
-  REVEAL_SPEED: 0.03,       // max mask increase per frame (at 60fps)
-  CLOSE_SECONDS: 4          // time for the fog to close once isIdle is true
+  // --- Fog color ---
+  FOG_ALPHA: 245,                 // Fog opacity (255 = fully covers; 225 lets some background through)
+  FOG_DARK: 186,                  // Brightness of dark areas (higher = whiter)
+  FOG_LIGHT: 250,                 // Brightness of light areas
+  FOG_CONTRAST: 1.25,             // Cloud contrast (1 = original, higher = more depth)
+  FOG_TINT: [1.0, 0.985, 0.945],  // R/G/B multipliers: slightly less blue → warm white
+                                  //   Warmer beige-gold: [1.0, 0.97, 0.9]
+                                  //   Cool moonlight:    [0.97, 0.985, 1.0]
+  RIM_LIGHT: 26,                  // Extra brightness on the opening edge
+  RIM_GOLD: [232, 204, 150],      // Soft gold color on the opening edge
+  RIM_GOLD_MIX: 0.45,             // Gold mix amount (0 = no gold rim)
+  FADE_POWER: 1.8,                // How cleanly the fog clears (higher = less grey haze)
+
+  // --- Fog shape ---
+  CELL: 8,                        // Fog grid cell size in px (bigger = faster and softer)
+  FOG_EVERY: 2,                   // Re-render fog texture every N frames
+  FOG_SCALE: 0.045,               // Cloud blob size (smaller = bigger blobs)
+  FOG_SPEED: 0.0035,              // Fog flow speed
+
+  // --- Clearing / closing ---
+  REVEAL_PER_PX: 0.00045,         // Reveal added per 1px of mouse movement (smaller = move longer)
+  REVEAL_SPEED: 0.0035,           // Max reveal per frame (smaller = slower; 0.002 ≈ 10s to fully clear)
+  EDGE: 0.16,                     // Softness of the clearing edge
+  DIST_WEIGHT: 0.55,              // 0 = random patches; 1 = pure circle expanding from the mouse
+  CLOSE_SECONDS: 5,               // Seconds to fully close after isIdle (higher = slower)
+  IDLE_MS: 10000,                 // Fallback idle timer only (used if isIdle is missing)
 };
 
+// ===== ② Cloud pattern settings (same as original, now full screen) =====
 const P1_CLOUD = {
-  GUIDE_SRC: 'xiangyun.png',                    // dark lines on light or transparent bg
-  AREA: { x: 0.25, y: 0.02, w: 0.5, h: 0.4 },   // where the pattern sits (ratio of canvas)
-  COUNT: 260,
-  SPEED: 1.2,
-  PULL: 0.6,                // pulls dots back onto the dark line
-  WOBBLE: 0.35,             // Perlin wobble
-  LINE_LIMIT: 0.55,         // brightness above this = off the line -> respawn
-  LIFE_MIN: 90,
-  LIFE_MAX: 220,
-  COLOR: [222, 178, 92],    // gold
-  WEIGHT: 1.4,
-  ALPHA: 160,
-  IDLE_VIS: 0.3,            // cloud strength while idle
-  FADE: 10,                 // trail erase strength per frame
-  DRAW_IN_FOG_PASS: true    // true = draw just under the fog (needed while 1111.png is opaque)
+  GUIDE_SRC: 'photo/cloud.png', // Path to the cloud guide image (relative to index.html)
+
+  OFFSET_Y: 0,            // Start from the top of the canvas
+  HEAVEN_RATIO: 1,        // 1 = cover the full canvas height
+
+  SPEED: 1.0,
+  FADE: 2,
+  FADE_EVERY: 8,          // [Trail fix] Erase once every 8 frames (same total), so trails fully disappear
+  LIFE: 900,
+  PULL: 0.12,             // Pull back onto the line (higher = sticks closer)
+  GRACE: 8,               // Frames off the line before respawning
+  THRESHOLD: 100,
+
+  NOISE_SCALE: 0.01,      // Particle wobble
+  NOISE_SPEED: 0.005,
+  NOISE_TURN: 0.08,
+
+  ALPHA: 70,
+  WEIGHT: 4,
+  COUNT: 3000,            // Keeps density at full screen; lower to 2000 if it lags
+
+  // [Base layer] Faint cloud pattern underneath (generated from cloud.png)
+  BASE_ALPHA: 0.12,               // Base strength: 0 = none, 0.12 = faint, 0.25 = visible
+  BASE_COLOR: [205, 175, 125],    // Base color (soft gold-brown, blends with the brown background)
+
+  // Cloud visibility field (patches of the pattern fade in and out)
+  FOG_SCALE: 0.004,
+  FOG_SPEED: 0.002,
+  FOG_LOW: 0.35,
+  FOG_HIGH: 0.65,
+
+  // [Soft white] Each color: [R, G, B, alpha multiplier, weight multiplier]
+  PALETTE: [
+    [196, 160, 98, 1.0, 1.0],   // Gilded gold
+    [230, 200, 140, 1.0, 1.0],  // Bright gold
+    [235, 230, 220, 0.3, 0.6],  // Moon white (softened)
+  ],
 };
 
-// ---------- Helper ----------
-function p1Smooth(e0, e1, x) {
-  const t = constrain((x - e0) / (e1 - e0), 0, 1);
-  return t * t * (3 - 2 * t);
-}
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+//  CODE BELOW — usually no need to edit
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
-// ==========================================
-// Part1: fog + reveal mask + cloud buffer
-// ==========================================
+
 class Part1 {
-  constructor() {
-    this.w = 0;
-    this.h = 0;
-    this.fogG = null;
-    this.pg = null;
-    this.guide = null;
-    this.cloudVis = P1_CLOUD.IDLE_VIS;
-    this.dots = [];
+  constructor(cloudImg, options = {}) {
+    this.cfg = Object.assign({}, P1_FOG, options);
 
-    // No preload() here (sketch.js owns it), so the guide image loads with a callback.
-    loadImage(
-      P1_CLOUD.GUIDE_SRC,
-      (img) => {
-        img.loadPixels();
-        this.guide = img;
-        this._fitGuide();
-        this._resetDots();
-      },
-      () => console.warn('[Part1] guide image not found, using a plain flow field')
-    );
+    this.cloudImg = cloudImg;   // Can start as null; setCloudImage() fills it after loading
+    this.pg = null;             // Particle trail layer
+    this.basePg = null;         // Faint base pattern layer
+    this.guide = null;          // Scaled copy of cloud.png
+    this.dots = [];             // Particles
+    this.w = width;             // Stored size, used to detect canvas resize
+    this.h = height;
 
-    this._rebuild();
-    this._resetDots();
+    this.revealMax = 1 + this.cfg.EDGE;
+    this.reveal = 0;
+    this.revealTarget = 0;
+    this.ox = width / 2;
+    this.oy = height / 2;
+    this.lastActive = -Infinity;
+    this.fullyClosed = true;
+
+    this._buildFogGrid();
+    this._buildCloud();
+    this._renderFog();          // First frame is full fog
   }
 
-  // Called again whenever the canvas size changes (windowResized in sketch.js)
-  _rebuild() {
+  // Called once cloud.png has finished loading
+  setCloudImage(img) {
+    this.cloudImg = img;
+    this._buildCloud();
+  }
+
+  resize() {
     this.w = width;
     this.h = height;
+    this.fogG.remove();
+    this.ox = width / 2;
+    this.oy = height / 2;
+    this.reveal = this.revealTarget = 0;
+    this.fullyClosed = true;
     this._buildFogGrid();
-    if (this.pg) this.pg.remove();
-    this.pg = createGraphics(width, height);
-    this._fitGuide();
+    this._buildCloud();
+    this._renderFog();
   }
 
-  // [AI] Low-res fog grid. One cell = CELL px. Fog is drawn on a tiny buffer, then scaled up.
-  _buildFogGrid() {
-    const c = P1_FOG.CELL;
-    this.cols = Math.ceil(width / c) + 1;
-    this.rows = Math.ceil(height / c) + 1;
+  // ---------------------------------------------------------- Main loop
+  update(idleState) {
+    if (width !== this.w || height !== this.h) this.resize();   // Auto-detect resize
 
-    if (this.fogG) this.fogG.remove();
+    const c = this.cfg;
+    const inside = mouseX >= 0 && mouseX <= width && mouseY >= 0 && mouseY <= height;
+    const mv = inside ? Math.min(60, dist(mouseX, mouseY, pmouseX, pmouseY)) : 0;
+    if (mv > 0.5 || mouseIsPressed) this.lastActive = millis();
+
+    const idle = (typeof idleState === 'boolean') ? idleState : this._readIdle();
+
+    if (!idle) {
+      if (mv > 0.5) {
+        this.revealTarget = Math.min(this.revealMax, this.revealTarget + mv * c.REVEAL_PER_PX);
+        this.ox = mouseX;
+        this.oy = mouseY;
+      }
+      this.reveal = Math.min(this.revealTarget, this.reveal + c.REVEAL_SPEED);
+      this._applyMask(true);
+      this.fullyClosed = false;
+    } else if (!this.fullyClosed) {
+      this.reveal = Math.max(0, this.reveal - this.revealMax / (c.CLOSE_SECONDS * 60));
+      this.revealTarget = this.reveal;
+      this._applyMask(false);
+      if (this.reveal === 0) {
+        this.mask.fill(0);
+        this.fullyClosed = true;
+      }
+    }
+
+    if (this.pg) this._updateCloud();
+    if (frameCount % c.FOG_EVERY === 0 || frameCount < 3) this._renderFog();
+  }
+
+  displayCloud() {
+    if (!this.pg) return;
+    push();
+    blendMode(BLEND); imageMode(CORNER); noTint();
+    if (this.basePg) image(this.basePg, 0, this.areaY);   // Faint base pattern first
+    image(this.pg, 0, this.areaY);                        // Then the gold particles
+    pop();
+  }
+
+  displayFog() {
+    const c = this.cfg;
+    push();
+    blendMode(BLEND); imageMode(CORNER); noTint();
+    image(this.fogG, -c.CELL / 2, -c.CELL / 2,
+          this.cols * c.CELL, this.rows * c.CELL);
+    pop();
+  }
+
+  display() {
+    this.displayCloud();
+    this.displayFog();
+  }
+
+  _readIdle() {
+    if (typeof isIdle !== 'undefined') return !!isIdle;
+    return millis() - this.lastActive > this.cfg.IDLE_MS;
+  }
+
+  // ========================================================== ① Fog
+  _buildFogGrid() {
+    const c = this.cfg;
+    this.cols = Math.ceil(width / c.CELL) + 1;
+    this.rows = Math.ceil(height / c.CELL) + 1;
+    const n = this.cols * this.rows;
+    this.mask = new Float32Array(n);
+    this.grain = new Float32Array(n);
+    for (let j = 0; j < this.rows; j++) {
+      for (let i = 0; i < this.cols; i++) {
+        const v = noise(i * 0.11 + 300, j * 0.11 + 300) * 0.7 +
+                  noise(i * 0.35 + 500, j * 0.35 + 500) * 0.3;
+        this.grain[j * this.cols + i] = constrain((v - 0.28) / 0.44, 0, 1);
+      }
+    }
     this.fogG = createGraphics(this.cols, this.rows);
     this.fogG.pixelDensity(1);
+    this.maxD = dist(0, 0, width, height) * 0.8;
+  }
 
-    const n = this.cols * this.rows;
-    this.mask = new Float32Array(n); // 0 = fog, 1 = clear
-    this.tear = new Float32Array(n); // fixed noise, for torn edges
+  _applyMask(open) {
+    const c = this.cfg, cols = this.cols, inv = 1 / c.EDGE;
+    const dw = c.DIST_WEIGHT, gw = 1 - dw;
     for (let j = 0; j < this.rows; j++) {
-      for (let i = 0; i < this.cols; i++) {
-        this.tear[j * this.cols + i] = noise(i * 0.35 + 300, j * 0.35 + 300);
+      const dy = j * c.CELL - this.oy;
+      for (let i = 0; i < cols; i++) {
+        const k = j * cols + i;
+        const dx = i * c.CELL - this.ox;
+        const dn = Math.min(1, Math.sqrt(dx * dx + dy * dy) / this.maxD);
+        const f = dw * dn + gw * this.grain[k];
+        let v = (this.reveal - f) * inv;
+        v = v < 0 ? 0 : v > 1 ? 1 : v;
+        if (open ? v > this.mask[k] : v < this.mask[k]) this.mask[k] = v;
       }
     }
   }
 
-  // Fit the guide image inside AREA, keep its proportions
-  _fitGuide() {
-    if (!this.guide) return;
-    const a = P1_CLOUD.AREA;
-    const aw = a.w * width;
-    const ah = a.h * height;
-    this.gs = Math.min(aw / this.guide.width, ah / this.guide.height);
-    this.gx0 = a.x * width + (aw - this.guide.width * this.gs) / 2;
-    this.gy0 = a.y * height + (ah - this.guide.height * this.gs) / 2;
-  }
-
-  _resetDots() {
-    this.dots = [];
-    for (let i = 0; i < P1_CLOUD.COUNT; i++) this.dots.push(new P1CloudDot(this));
-  }
-
-  // ---------- Per frame ----------
-  update(idle, mx, my) {
-    if (width !== this.w || height !== this.h) {
-      this._rebuild();
-      this._resetDots();
-    }
-    const dt = Math.min(deltaTime, 50) / 1000;
-    this._applyMask(idle, mx, my, dt);
-    this.cloudVis = lerp(this.cloudVis, idle ? P1_CLOUD.IDLE_VIS : 1, 0.03);
-    this._updateCloud();
-  }
-
-  // [AI] Reveal mask. Each cell opens a little per frame, never faster than REVEAL_SPEED.
-  _applyMask(idle, mx, my, dt) {
-    const F = P1_FOG;
-    const m = this.mask;
-    const c = F.CELL;
-
-    // Idle: everything closes back over CLOSE_SECONDS
-    if (idle) {
-      const close = dt / F.CLOSE_SECONDS;
-      for (let k = 0; k < m.length; k++) {
-        if (m[k] > 0) m[k] = Math.max(0, m[k] - close);
-      }
-      return;
-    }
-
-    if (mx < 0 || my < 0 || mx > width || my > height) return;
-
-    const R = F.BRUSH * width;
-    const reach = R * (1 + F.TEAR);
-    const step = F.REVEAL_SPEED * dt * 60;
-
-    const i0 = Math.max(0, Math.floor((mx - reach) / c));
-    const i1 = Math.min(this.cols - 1, Math.ceil((mx + reach) / c));
-    const j0 = Math.max(0, Math.floor((my - reach) / c));
-    const j1 = Math.min(this.rows - 1, Math.ceil((my + reach) / c));
-
-    for (let j = j0; j <= j1; j++) {
-      for (let i = i0; i <= i1; i++) {
-        const k = j * this.cols + i;
-        const d = Math.hypot((i + 0.5) * c - mx, (j + 0.5) * c - my);
-        const torn = d + (this.tear[k] - 0.5) * 2 * F.TEAR * R; // distance + fixed noise
-        const target = 1 - p1Smooth(R * 0.35, R, torn);
-        if (target > m[k]) m[k] = Math.min(target, m[k] + step);
-      }
-    }
-  }
-
-  _updateCloud() {
-    const pg = this.pg;
-    const C = P1_CLOUD;
-
-    // Old strokes fade a little each frame -> brush-like trail
-    pg.push();
-    pg.noStroke();
-    pg.erase(C.FADE, 0);
-    pg.rect(0, 0, pg.width, pg.height);
-    pg.noErase();
-    pg.pop();
-
-    pg.strokeWeight(C.WEIGHT);
-    for (const d of this.dots) d.step(this, pg);
-  }
-
-  // [AI] Domain-warped noise: one noise layer bends the coordinates of another.
-  _renderFog(idle) {
-    const F = P1_FOG;
-    const g = this.fogG;
-    const t = millis() * F.DRIFT;
-    const s = F.NOISE_SCALE * F.CELL;
-    const breath = idle ? 1 + F.BREATH * Math.sin(millis() * 0.0012) : 1;
-
+  _renderFog() {
+    const c = this.cfg, g = this.fogG, cols = this.cols;
+    const t = frameCount * c.FOG_SPEED;
+    const [tr, tg, tb] = c.FOG_TINT;
+    const [gr, gg, gb] = c.RIM_GOLD;
     g.loadPixels();
-    const p = g.pixels;
-
+    const px = g.pixels;
     for (let j = 0; j < this.rows; j++) {
-      for (let i = 0; i < this.cols; i++) {
-        const k = j * this.cols + i;
-        const o = k * 4;
-        const open = this.mask[k];
+      for (let i = 0; i < cols; i++) {
+        const k = j * cols + i, idx = k * 4;
+        const m = this.mask[k];
+        const s = m * m * (3 - 2 * m);
+        const a = c.FOG_ALPHA * Math.pow(1 - s, c.FADE_POWER);
+        if (a < 1) { px[idx + 3] = 0; continue; }
 
-        if (open >= 0.999) {
-          p[o + 3] = 0;
-          continue;
-        }
+        const x = i * c.FOG_SCALE, y = j * c.FOG_SCALE * 1.6;
+        const w = noise(x * 0.5 + t, y * 0.5 - t * 0.5, 7.3);
+        let v = noise(x + w * 2 - t * 0.6, y + w * 1.2, t) * 0.65 +
+                noise(x * 2.3 + 40, y * 2.3, t * 1.5) * 0.35;
+        v = constrain((v - 0.25) / 0.5, 0, 1);
+        v = constrain(0.5 + (v - 0.5) * c.FOG_CONTRAST, 0, 1);
 
-        const x = i * s;
-        const y = j * s;
-        const qx = noise(x + t, y);
-        const qy = noise(x + 5.2, y + 1.3 - t);
-        const r = noise(x + F.WARP * qx + 1.7, y + F.WARP * qy + 9.2 + t * 0.5);
-        const d = p1Smooth(0.3, 0.7, r);
+        const rim = 4 * m * (1 - m);
+        const lum = c.FOG_DARK + (c.FOG_LIGHT - c.FOG_DARK) * v + rim * c.RIM_LIGHT;
 
-        const a = F.ALPHA_MAX * (F.ALPHA_MIN + (1 - F.ALPHA_MIN) * d) * breath * (1 - open);
-        p[o]     = F.SHADOW[0] + (F.LIGHT[0] - F.SHADOW[0]) * d;
-        p[o + 1] = F.SHADOW[1] + (F.LIGHT[1] - F.SHADOW[1]) * d;
-        p[o + 2] = F.SHADOW[2] + (F.LIGHT[2] - F.SHADOW[2]) * d;
-        p[o + 3] = Math.min(255, a);
+        let r = lum * tr, gch = lum * tg, b = lum * tb;
+        const gm = rim * c.RIM_GOLD_MIX;
+        r   += (gr - r)   * gm;
+        gch += (gg - gch) * gm;
+        b   += (gb - b)   * gm;
+
+        px[idx]     = r;
+        px[idx + 1] = gch;
+        px[idx + 2] = b;
+        px[idx + 3] = a;
       }
     }
     g.updatePixels();
   }
 
-  // ---------- Guide image reading ----------
-  // Brightness at guide pixel coords: 0 = dark line, 1 = empty
-  _bright(gx, gy) {
-    const g = this.guide;
-    gx = constrain(gx | 0, 0, g.width - 1);
-    gy = constrain(gy | 0, 0, g.height - 1);
-    const k = (gy * g.width + gx) * 4;
-    const px = g.pixels;
-    const lum = (px[k] + px[k + 1] + px[k + 2]) / 765;
-    return 1 - (1 - lum) * (px[k + 3] / 255); // transparent counts as empty
-  }
+  // ========================================================== ② Cloud pattern
+  _buildCloud() {
+    if (!this.cloudImg) return;
 
-  // [AI] Brightness + gradient at a canvas point. Returns null outside the guide image.
-  gradientAt(x, y) {
-    if (!this.guide) return null;
-    const gx = (x - this.gx0) / this.gs;
-    const gy = (y - this.gy0) / this.gs;
-    if (gx < 2 || gy < 2 || gx >= this.guide.width - 2 || gy >= this.guide.height - 2) return null;
-    const s = 2;
-    return {
-      b: this._bright(gx, gy),
-      dx: (this._bright(gx + s, gy) - this._bright(gx - s, gy)) / (2 * s),
-      dy: (this._bright(gx, gy + s) - this._bright(gx, gy - s)) / (2 * s)
-    };
-  }
-
-  // ---------- Drawing to the main canvas ----------
-  drawClouds() {
-    push();
-    blendMode(BLEND);
-    image(this.pg, 0, 0, width, height);
-    pop();
-  }
-
-  drawFog(idle) {
-    this._renderFog(idle);
-    push();
-    blendMode(BLEND);
-    const c = P1_FOG.CELL;
-    image(this.fogG, 0, 0, this.cols * c, this.rows * c);
-    pop();
-  }
-}
-
-// ==========================================
-// P1CloudDot: one gold particle
-// ==========================================
-// Particles follow the dark lines of the xiangyun image by reading its brightness gradient.
-// [REF] Flow-field particle idea from The Coding Train: https://www.youtube.com/watch?v=BjoM9oKOAKY
-class P1CloudDot {
-  constructor(sys) {
-    this.respawn(sys);
-  }
-
-  respawn(sys) {
-    const a = P1_CLOUD.AREA;
-    // Try a few random spots, keep one that sits on a dark line
-    for (let tries = 0; tries < 30; tries++) {
-      this.x = (a.x + random(a.w)) * width;
-      this.y = (a.y + random(a.h)) * height;
-      if (!sys.guide) break;
-      const g = sys.gradientAt(this.x, this.y);
-      if (g && g.b < P1_CLOUD.LINE_LIMIT * 0.8) break;
-    }
-    const ang = random(TWO_PI);
-    this.vx = Math.cos(ang);
-    this.vy = Math.sin(ang);
-    this.px = this.x;
-    this.py = this.y;
-    this.maxLife = random(P1_CLOUD.LIFE_MIN, P1_CLOUD.LIFE_MAX);
-    this.life = this.maxLife;
-  }
-
-  step(sys, pg) {
     const C = P1_CLOUD;
-    const a = C.AREA;
-    this.px = this.x;
-    this.py = this.y;
-
-    const n = noise(this.x * 0.008, this.y * 0.008, millis() * 0.0002) * TWO_PI * 2;
-    let ax = Math.cos(n) * C.WOBBLE;
-    let ay = Math.sin(n) * C.WOBBLE;
-
-    if (sys.guide) {
-      const g = sys.gradientAt(this.x, this.y);
-      if (!g || g.b > C.LINE_LIMIT) {
-        this.respawn(sys);
-        return;
-      }
-      const len = Math.hypot(g.dx, g.dy);
-      if (len > 1e-4) {
-        let tx = -g.dy / len; // along the line (perpendicular to the gradient)
-        let ty = g.dx / len;
-        if (tx * this.vx + ty * this.vy < 0) { tx = -tx; ty = -ty; } // keep the same direction
-        ax += tx * C.SPEED - (g.dx / len) * C.PULL; // move along + pull toward darker
-        ay += ty * C.SPEED - (g.dy / len) * C.PULL;
-      } else {
-        ax += this.vx * C.SPEED;
-        ay += this.vy * C.SPEED;
-      }
-    } else {
-      // Fallback when the image is missing: plain Perlin flow field
-      ax += Math.cos(n) * C.SPEED;
-      ay += Math.sin(n) * C.SPEED;
+    const base = (typeof heavenTop !== 'undefined') ? heavenTop : 0;
+    this.areaY = Math.max(0, base + C.OFFSET_Y);
+    let h = height * C.HEAVEN_RATIO;
+    if (typeof earthTop !== 'undefined' && earthTop > this.areaY) {
+      h = Math.min(h, earthTop - this.areaY);
     }
+    this.areaW = width;
+    this.areaH = h;
 
-    this.vx = lerp(this.vx, ax, 0.25);
-    this.vy = lerp(this.vy, ay, 0.25);
-    this.x += this.vx;
-    this.y += this.vy;
+    const w = Math.ceil(this.areaW), hh = Math.ceil(this.areaH);
+    if (this.pg) this.pg.remove();
+    this.pg = createGraphics(w, hh);
+    this.pg.clear();
 
-    const out = this.x < a.x * width || this.x > (a.x + a.w) * width ||
-                this.y < a.y * height || this.y > (a.y + a.h) * height;
-    if (--this.life <= 0 || out) {
-      this.respawn(sys);
-      return;
+    this.guide = createImage(w, hh);
+    this.guide.copy(this.cloudImg, 0, 0, this.cloudImg.width, this.cloudImg.height, 0, 0, w, hh);
+    this.guide.loadPixels();
+
+    this._buildBase(w, hh);
+
+    this.dots = [];
+    for (let i = 0; i < C.COUNT; i++) this.dots.push(new P1CloudDot(this));
+  }
+
+  // Build a faint base layer from cloud.png lines.
+  // Computed once on build, so it costs nothing per frame.
+  _buildBase(w, hh) {
+    const C = P1_CLOUD;
+    if (this.basePg) { this.basePg.remove(); this.basePg = null; }
+    if (C.BASE_ALPHA <= 0) return;
+
+    const bp = createGraphics(w, hh);
+    bp.pixelDensity(1);
+    bp.loadPixels();
+    const src = this.guide.pixels, dst = bp.pixels;
+    const [cr, cg, cb] = C.BASE_COLOR;
+    for (let k = 0; k < w * hh; k++) {
+      const o = k * 4;
+      const bri = (src[o] + src[o + 1] + src[o + 2]) / 3;
+      let d = (255 - bri) * (src[o + 3] / 255) / 255;   // 0 = empty, 1 = ink line
+      d = constrain((d - 0.2) / 0.6, 0, 1);               // Keep only the lines
+      dst[o] = cr; dst[o + 1] = cg; dst[o + 2] = cb;
+      dst[o + 3] = 255 * C.BASE_ALPHA * d;
     }
+    bp.updatePixels();
+    this.basePg = bp;
+  }
 
-    const fade = Math.sin(Math.PI * this.life / this.maxLife);
-    pg.stroke(C.COLOR[0], C.COLOR[1], C.COLOR[2], C.ALPHA * fade * sys.cloudVis);
-    pg.line(this.px, this.py, this.x, this.y);
+  _updateCloud() {
+    const C = P1_CLOUD;
+    // Batched erase: every FADE_EVERY frames, erase FADE × FADE_EVERY.
+    // Same total as before, but large enough not to be rounded to 0,
+    // so old trails fully disappear instead of piling up as grey bands.
+    if (frameCount % C.FADE_EVERY === 0) {
+      this.pg.erase(Math.min(255, C.FADE * C.FADE_EVERY));
+      this.pg.noStroke();
+      this.pg.rect(0, 0, this.areaW, this.areaH);
+      this.pg.noErase();
+    }
+    for (const d of this.dots) {
+      d.update();
+      d.draw(this.pg);
+    }
+  }
+
+  brightnessAt(x, y) {
+    const ix = Math.floor(constrain(x, 0, this.guide.width - 1));
+    const iy = Math.floor(constrain(y, 0, this.guide.height - 1));
+    const idx = 4 * (iy * this.guide.width + ix);
+    const p = this.guide.pixels;
+    const bri = (p[idx] + p[idx + 1] + p[idx + 2]) / 3;
+    return (255 - bri) * (p[idx + 3] / 255);
+  }
+
+  gradientAt(x, y) {
+    const d = 2;
+    const gx = this.brightnessAt(x + d, y) - this.brightnessAt(x - d, y);
+    const gy = this.brightnessAt(x, y + d) - this.brightnessAt(x, y - d);
+    return createVector(gx, gy);
+  }
+
+  fogDensityAt(x, y) {
+    const C = P1_CLOUD;
+    const n = noise(x * C.FOG_SCALE + 1000, y * C.FOG_SCALE + 1000, frameCount * C.FOG_SPEED);
+    const t = constrain((n - C.FOG_LOW) / (C.FOG_HIGH - C.FOG_LOW), 0, 1);
+    return t * t * (3 - 2 * t);
   }
 }
 
-// ==========================================
-// Framework hooks (replace the placeholders in sketch.js)
-// ==========================================
+
+// ---------------------------------------------------------- CloudDot (original)
+class P1CloudDot {
+  constructor(parent) {
+    this.parent = parent;
+    this.spawn();
+  }
+
+  spawn() {
+    const p = this.parent, C = P1_CLOUD;
+    let x, y;
+    for (let tries = 0; tries < 100; tries++) {
+      x = random(p.guide.width);
+      y = random(p.guide.height);
+      if (p.brightnessAt(x, y) > C.THRESHOLD) break;
+    }
+    this.pos = createVector(x, y);
+    this.prev = this.pos.copy();
+
+    const g = p.gradientAt(x, y);
+    this.vel = createVector(-g.y, g.x);
+    if (this.vel.mag() < 0.001) this.vel = p5.Vector.random2D();
+    if (random() < 0.5) this.vel.mult(-1);
+    this.vel.setMag(C.SPEED);
+
+    this.grace = C.GRACE;
+    this.col = random(C.PALETTE);
+    this.life = random(C.LIFE * 0.5, C.LIFE);
+    this.maxLife = this.life;
+  }
+
+  update() {
+    const p = this.parent, C = P1_CLOUD;
+    const g = p.gradientAt(this.pos.x, this.pos.y);
+
+    const tangent = createVector(-g.y, g.x);
+    if (tangent.dot(this.vel) < 0) tangent.mult(-1);
+
+    if (tangent.mag() > 0.001) {
+      tangent.setMag(C.SPEED);
+      const pull = g.copy().limit(C.SPEED * 2).mult(C.PULL);
+      this.vel.add(p5.Vector.sub(tangent, this.vel).mult(0.2));
+      this.vel.add(pull);
+      this.vel.setMag(C.SPEED);
+    }
+
+    const n = noise(this.pos.x * C.NOISE_SCALE, this.pos.y * C.NOISE_SCALE,
+                    frameCount * C.NOISE_SPEED);
+    this.vel.rotate(map(n, 0, 1, -C.NOISE_TURN, C.NOISE_TURN));
+
+    this.prev = this.pos.copy();
+    this.pos.add(this.vel);
+    this.life--;
+
+    if (p.brightnessAt(this.pos.x, this.pos.y) < C.THRESHOLD * 0.4) this.grace--;
+    else this.grace = C.GRACE;
+
+    if (this.life <= 0 || this.grace <= 0 ||
+        this.pos.x < 0 || this.pos.x >= p.guide.width ||
+        this.pos.y < 0 || this.pos.y >= p.guide.height) {
+      this.spawn();
+    }
+  }
+
+  draw(pg) {
+    const C = P1_CLOUD;
+    const fog = this.parent.fogDensityAt(this.pos.x, this.pos.y);
+    if (fog <= 0.01) return;
+    const am = this.col[3] ?? 1;   // Alpha multiplier
+    const wm = this.col[4] ?? 1;   // Weight multiplier
+    const w = map(this.life, 0, this.maxLife, 0.3, C.WEIGHT) * wm;
+    pg.stroke(this.col[0], this.col[1], this.col[2], C.ALPHA * fog * am);
+    pg.strokeWeight(w);
+    pg.line(this.prev.x, this.prev.y, this.pos.x, this.pos.y);
+  }
+}
+
+
+// ==========================================================
+//  Framework hookup: replaces the two placeholder functions in sketch.js
+// ==========================================================
 let p1 = null;
+let p1LastFrame = -1;
+
 function p1System() {
-  if (!p1) p1 = new Part1(); // first frame: canvas already exists
+  if (!p1) {
+    p1 = new Part1(null);
+    loadImage(
+      P1_CLOUD.GUIDE_SRC,
+      (img) => {
+        p1.setCloudImage(img);
+        console.log('[Part1] Cloud image loaded: ' + P1_CLOUD.GUIDE_SRC);
+      },
+      () => console.error('[Part1] Cannot find ' + P1_CLOUD.GUIDE_SRC +
+                          ' — check the file name and path')
+    );
+  }
   return p1;
 }
 
-// Layer 1 in sketch.js (under 1111.png)
-function drawKristenClouds(idleState) {
-  const s = p1System();
-  s.update(idleState, mouseX, mouseY);
-  if (!P1_CLOUD.DRAW_IN_FOG_PASS) s.drawClouds();
+// Update only once per frame, even though two layers call it
+function p1Tick(idleState) {
+  if (p1LastFrame === frameCount) return;
+  p1LastFrame = frameCount;
+  p1System().update(idleState);
 }
 
-// Layer 5 in sketch.js (above everything except Junyu's lantern)
+// [Layer 2] Above bg1, below bg2
+function drawKristenClouds(idleState) {
+  p1Tick(idleState);
+  p1System().displayCloud();
+}
+
+// [Layer 7] Above sun/moon glow, below lantern
 function drawKristenFog(idleState, mx, my) {
-  const s = p1System();
-  if (P1_CLOUD.DRAW_IN_FOG_PASS) s.drawClouds();
-  s.drawFog(idleState);
+  p1Tick(idleState);
+  p1System().displayFog();
 }
