@@ -1,185 +1,131 @@
-# TODO: Project Title
+# 9103 Group C — Awakening Heaven
+## 1. Inspiration and Core Concept
+> “Death is not the end. Forgetting is.”
 
-> TODO: One-line description of the project.
-> e.g. An interactive p5.js piece that moves through three layers of a Chinese cosmology: Heaven, the human world, and Earth.
+Our project draws on Chinese mythology and the Mawangdui silk painting. Without an audience, the heavenly world remains trapped in a lifeless cycle. Through movement and listening, viewers clear the fog and bring it back to life.
 
-**Live prototype:** TODO: link
-**Team:** Kristen Li/ Haocheng //· TODO: other members
+The experience follows four connected states:
 
----
+**Slumber → Awakening → Resonance → Oblivion → Slumber**
 
-## 1. Inspiration
+- **Slumber:** Fog hides the painting. The sun and moon repeat their cycle above it. A lantern bearer glows faintly blue.
+- **Awakening:** Mouse movement clears the fog and warms the lantern. The sun and moon pause. The Fusang tree grows fruit, and the toad begins to glow and float.
+- **Resonance:** Mouse clicks trigger three sounds. The dragons regain colour, breathe, and rotate.
+- **Oblivion:** After 10 seconds without movement or clicks, the sound fades, fog returns, and the world falls asleep again.
 
-TODO: What is the source material? (story / painting / myth / concept)
-
-- TODO: Inspiration 1
-- Part 1 – Celestial Mist (kristen)
-
-- **Chinese ‘Xiangyun’ Cloud Motifs**
-These sinuous cloud patterns are commonly found on Han Dynasty palaces, ceremonial robes and ceramics. In Chinese art, they symbolise the heavens and the realm of the divine. I used an image of auspicious clouds as an invisible guide. At the same time, the cloud patterns also signify the natural cycles of the celestial realm and divine revelations. Particles move along their contour trajectories, causing the pattern to be naturally outlined in gold.
-- **Mist in Chinese Landscape Painting**
-In landscape paintings, mist obscures parts of the mountains. The viewer can never see the entire scene at a glance. That vast and hazy expanse is precisely where I began to create the mist layer.
-- **Moonlight**
-I did not want a grey, murky haze. I wanted this mist to evoke the crisp moonlight of a dark night. Consequently, it appears as a warm white, with a slight sense of transparency.
-
-**How this has influenced my design:**
-The celestial realm is not meant to be easily seen. The viewer must slow their pace to seek it out. Consequently, the cloud patterns are initially completely concealed. They only reveal themselves as you move, and do so very gradually. Once you stop, the mist will conceal them once more.
-- TODO: Inspiration 2  (e.g. artwork, website, game)
-  TODO: link + one or two sentences.
-- TODO: Inspiration 3**
-  TODO
-
-**How this shaped our approach:**
-TODO: 2–4 short sentences. e.g. We wanted the viewer to "earn" the image. So the heaven layer starts hidden under thick fog. You have to move to see it.
-
----
-
+### Individual Inspirations
+- **Kristen Li:** Chinese cloud motifs, mist in landscape paintings, and soft  moonlight inspired the fog and golden cloud particles. The cloud guide image comes from《中国纹样全集》, accessed through [Pinterest](https://ch.pinterest.com/pin/5488830777107015/).
+- **Haocheng Gong:** [Add your specific inspirations and their influence.]
+- **Yuanze Lin:** [Add your specific inspirations and their influence.]
+- **Junyu Cai:** [Add your specific inspirations and their influence.]
 ## 2. Techniques
+The project uses p5.js. `sketch.js` coordinates the main scene. Each mechanic responds to shared interaction and idle states.
 
-### Overview
-TODO: How is the project structured? e.g.
-`sketch.js` sets up the canvas and calls each part. Each mechanic lives in its own file as a class with `update()` and `display()`. Parts talk through a few global variables (`isIdle`, `heavenTop`, `earthTop`).
+### Time-based Animation — Haocheng Gong
+- Use `millis()` to track inactivity. Mouse movement or clicks reset the timer.
+- Share `isIdle` with the other mechanics after 10 seconds without input.
+- Run a 20-second sun and moon cycle during idle mode.
+- During awakening, pause this cycle and use time to animate Fusang fruit growth and the toad’s gentle floating motion.
 
-### Part 1 – Heavenly Fog & Cloud Pattern (`perlin-noise.js`)
+**Key decision:** One shared timer keeps all mechanics in the same state.
 
-**How it works**
-The file has two parts. The `Part1` class runs the fog. The `P1CloudDot` class is one gold particle. Each frame does four things:
+### User Input — Junyu Cai
+- Read mouse movement to activate the lantern and reset inactivity.
+- Use `lerpColor()` to blend the lantern from cold blue to warm yellow, while expanding its glow.
+- Use `mousePressed()` to cycle through three sounds: jade chime, war drum, and chant.
 
-1. Update the reveal mask based on mouse movement.
-2. Draw the fog onto its own buffer, with the mask cutting holes in it.
-3. Move the particles along the cloud image and draw their trails.
-4. Stack the layers: dark background → gold clouds → fog.
+**Key decision:** Movement reveals the scene; clicks activate sound and dragon responses.
 
-**Techniques used**
+### Perlin Noise — Kristen Li
+- Use Perlin noise and domain warping to create flowing fog.
+- Use `createGraphics()` to separate fog and particle layers.
+- Calculate fog on a low-resolution grid to reduce computation.
+- Store local visibility in a reveal mask. Mouse movement gradually clears nearby fog; idle mode restores it.
+- Use image brightness gradients to guide golden particles along cloud contours.
+- Use `erase()` to fade old particle trails.
 
-| Technique | Where | Why |
-|---|---|---|
-| `noise()` (Perlin noise) | fog texture, particle wobble | Soft natural movement. `random()` looked like static. |
-| Domain warping (noise inside noise) | `_renderFog()` | One noise layer looked flat. Feeding one into another makes the fog swirl. |
-| `createGraphics()` buffers | `fogG`, `pg` | Fog and clouds are drawn apart, so I can fade the trails without touching the fog. |
-| Low-res grid + `loadPixels()` / `updatePixels()` | `_buildFogGrid()`, `_renderFog()` | Noise per pixel was too slow. I calculate it on an 8px grid and scale it up. Faster, and the blur makes it softer. |
-| `Float32Array` reveal mask | `_applyMask()` | One value per cell, 0 = fog, 1 = clear. Cleared areas stay open until idle. |
-| Image brightness gradient | `gradientAt()`, `P1CloudDot` | Particles read the brightness of the xiangyun image and move along its dark lines, not across them. |
-| `erase()` with low alpha | `_updateCloud()` | Old strokes fade a little each frame. That leaves a brush-like trail. |
-| Smoothstep easing | mask edges, fog density | No hard edges. Everything fades in and out. |
+**Key decision:** Fog and cloud particles use separate drawing layers. A gradual reveal limit encourages slow exploration.
 
-**Key decisions**
-- **Speed limit.** The reveal can only grow by `REVEAL_SPEED` per frame. Shaking the mouse fast does nothing special. I wanted the piece to reward slow movement.
-- **Torn edges.** Cells don't clear in a perfect circle. Distance from the mouse is mixed with a fixed noise pattern. The holes look like mist breaking up.
-- **Fog colour.** My first version used grey. On the dark background it looked dirty. I switched to a warm moon-white.
-- **Closing on idle.** I use Haocheng's global `isIdle`. When it's true, the reveal drops back to 0 over `CLOSE_SECONDS`.
-- **One config block.** All numbers sit in `P1_FOG` and `P1_CLOUD` at the top of the file. Tuning was much easier this way.
+### Audio Feedback — Yuanze Lin
+- Read sound amplitude to control the dragons’ response.
+- Use `lerpColor()` to restore their colour.
+- Use `lerp()` and `scale()` for smooth, amplitude-driven breathing.
+- Use `translate()` and `rotate()` to turn each dragon around its centre.
+- During idle mode, fade the audio and reset the dragons to grey and still.
 
-### Part 2 – TODO: Mechanic Name (`TODO.js`)
-TODO: techniques used + why
+**Key decision:** The dragons respond to user-triggered sounds rather than playing music automatically.
 
-### Part 3 – TODO: Mechanic Name (`TODO.js`)
-TODO
+## 3. Mechanics and Responsibilities
+| Member | Mechanic | Main responsibilities |
+| --- | --- | --- |
+| Haocheng Gong | Time-based animation | Shared idle timer, `isIdle`, sun and moon cycle, Fusang fruit growth, and toad animation. |
+| Junyu Cai | User input | Lantern colour and glow, mouse interaction, and cycling through three sounds on clicks. |
+| Kristen Li | Perlin noise | Full-screen fog, gradual mouse-based revealing, golden cloud patterns, and fog restoration. |
+| Yuanze Lin | Audio feedback | Dragon colour, amplitude-driven scaling, rotation, and audio fade-out during idle mode. |
 
-### Part 4 – TODO: Mechanic Name (`TODO.js`)
-
----
-
-## 3. Mechanic Ownership
-
-| Member | Mechanic | File | What it does |
-|---|---|---|---|
-|  Kristen | Heavenly fog & cloud pattern | `perlin-noise.js` | A thick moonlit fog covers the heaven layer. Moving the mouse slowly clears it bit by bit. Underneath, gold particles trace a xiangyun cloud pattern. When the viewer stops (`isIdle`), the fog slowly closes again.  |
-| Haocheng | TODO: e.g. idle detection / TODO | `TODO.js` | TODO. Provides the global `isIdle` used by Part 1. |
-| Yuanze | TODO | `TODO.js` | TODO |
-| Junyu | TODO | `TODO.js` | TODO |
-
----
+## 3. Mechanics and Responsibilities
+| Member | Mechanic / File | What it does |
+| --- | --- | --- |
+| Kristen | Heavenly fog and cloud patterns / `perlin-noise.js` | Slowly reveals golden cloud patterns through mouse movement and restores fog when idle. |
+| Haocheng Gong | [Mechanic / file] | Provides `isIdle`. [Add your mechanic’s main behaviour.] |
+| Yuanze Lin | [Mechanic / file] | [Describe what your mechanic does.] |
+| JunYu | [Mechanic / file] | [Describe what your mechanic does.] |
 
 ## 4. AI Acknowledgement
+### Kristen
+I used **Claude** to help write fog rendering, reveal masks, reveal-speed control, and organise parameters.
 
-We used AI tools in parts of this project. Every AI-assisted section is also marked in the code with a comment.
+The assisted code calculates noise on a low-resolution grid. A mask stores values from 0 (covered) to 1 (clear). Mouse movement increases local visibility. During idle mode, visibility decreases and fog returns.
 
-| Tool | Used by | File / section | What it was used for |
-|---|---|---|---|
-Part 1 (Kristen)
+I developed the particle effect concept, selected the guide image, reviewed the code, and adjusted colours and parameters. I also connected the fog to `isIdle`.
 
-I used **Claude (Anthropic)** while building the fog system. The particle idea and the cloud image guide were mine. Claude helped with:
+**ChatGPT** helped organise, shorten, and translate this README.
 
-- **Fog rendering (`_renderFog()`, `_buildFogGrid()`)**: the low-res grid and the domain-warped noise.
-- **Reveal mask (`_applyMask()`)**: storing one value per cell and mixing mouse distance with noise for torn edges.
-- **Speed limit (`update()`)**: making the reveal follow a target value by a small step each frame.
-- **Refactoring**: moving all parameters into `P1_FOG` and `P1_CLOUD`.
-- **Fog colour**: changing grey fog to warm moon-white.
 
-**How the AI-assisted code works**
-1. The canvas is split into 8px cells. Each cell gets a fog value from two layers of Perlin noise, one warping the other.
-2. Each cell has a mask value from 0 (fog) to 1 (clear).
-3. Mouse movement raises a target. The real reveal value chases it, but only by `REVEAL_SPEED` per frame.
-4. A cell clears when the reveal passes its threshold. The threshold = distance from mouse + fixed noise. So edges look ragged.
-5. When `isIdle` is true, the target drops to 0 and the fog closes over `CLOSE_SECONDS`.
+### Other Members
+- **Haocheng Gong:** [Name the AI tool, its purpose, and how the assisted code works. Write “None” if unused.]
+- **Yuanze Lin:** [Name the AI tool, its purpose, and how the assisted code works. Write “None” if unused.]
+- **JunYu:** [Name the AI tool, its purpose, and how the assisted code works. Write “None” if unused.]
 
-**What I did myself**
-I designed the particle system and picked the guide image. I tested and tuned every value in the config. I connected the fog to `isIdle`. I read through the AI code and changed it until I understood each step.
+Mark each AI-assisted section in the actual code, for example:
 
-All AI-assisted sections are marked in the code with `// [AI]`.
-| TODO | TODO | TODO | TODO |
-
-**How the AI-assisted code works (Part 1):**
-1. The screen is split into an 8px grid. Each cell gets a fog colour from layered Perlin noise.
-2. Each cell also has a mask value from 0 (full fog) to 1 (clear).
-3. Mouse movement raises a target value. The real reveal value follows it, but only by a small step each frame. That keeps it slow.
-4. Cells clear based on their distance from the mouse plus a fixed noise pattern. That's why the edges look torn, not round.
-5. When `isIdle` is true, the reveal value goes back down over `CLOSE_SECONDS` and the fog returns.
-
-**What we changed / understood ourselves:**
-TODO: e.g. We tuned all the values, tested different colours, and connected it to Haocheng's `isIdle`.
-
----
+    // [AI] Claude helped generate this reveal mask.
+    // It stores fog visibility per grid cell and updates it during interaction.
 
 ## 5. External References
+### Kristen
+- [Cloud motif — Pinterest](https://ch.pinterest.com/pin/5488830777107015/): From《中国纹样全集》. Used as the guide image for golden cloud particles.
+- [daydev — OpenProcessing](https://openprocessing.org/@daydev/2659627/): Inspired the use of Perlin noise in particle movement. The reference converts noise values into movement angles. In my version, image gradients guide particles along cloud contours, while noise adds a slight wobble. The reference does not provide the fog rendering or reveal mask.
+- [p5.js — noise()](https://p5js.org/reference/p5/noise/): Used to understand smooth noise and its sampling coordinates.
+- [p5.js — createGraphics()](https://p5js.org/reference/p5/createGraphics/): Used to create separate fog and particle buffers.
+- [p5.js — erase()](https://p5js.org/reference/p5/erase/): Used to fade old particle trails.
+- [Inigo Quilez — Domain Warping](https://iquilezles.org/articles/warp/): Referenced for distorting noise coordinates to create swirling fog.
 
-| Source | Link | How it influenced us | Used in |
-|---|---|---|---|
-|kristen： p5.js Reference – `noise()` | https://p5js.org/reference/p5/noise/ | How Perlin noise works in p5 | `perlin-noise.js` |
-| p5.js Reference – `createGraphics()` | https://p5js.org/reference/p5/createGraphics/ | Off-screen layers for fog and clouds | `perlin-noise.js` |
-| p5.js Reference – `erase()` | https://p5js.org/reference/p5/erase/ | Fading the particle trails | `_updateCloud()` |
-| Inigo Quilez – Domain Warping | https://iquilezles.org/articles/warp/ | Noise inside noise, for swirling fog | `_renderFog()` |
-| The Coding Train – Perlin Noise Flow Field | https://www.youtube.com/watch?v=BjoM9oKOAKY | Particles moving along a field | `P1CloudDot` |
-| TODO | TODO | TODO | TODO |
+### Other Members
+- **Haocheng Gong:** [Add source links and explain what you used or adapted.]
+- **Yuanze Lin:** [Add source links and explain what you used or adapted.]
+- **JunYu:** [Add source links and explain what you used or adapted.]
 
-> TODO: Keep only the sources you actually used.
+Add source comments beside referenced or adapted code, for example:
 
----
+    // [REF] Domain warping: https://iquilezles.org/articles/warp/
+    // Noise offsets distort the sampling coordinates to create swirling fog.
 
 ## 6. Interaction Instructions
+### Kristen — Heavenly Fog
+1. Slowly move the mouse across the top of the scene to clear the fog.
+2. Watch golden cloud patterns appear. Fast movement does not increase the reveal speed.
+3. Stop moving. Once the scene becomes idle, fog gradually covers the patterns again.
 
-1. Kristen: - **Move the mouse slowly over the top of the screen.** The fog opens where you move. Gold cloud lines appear underneath.
-            - **Moving fast won't help.** The fog has a speed limit. Slow and steady works best.
-            - **Stop moving for a few seconds.** The fog drifts back and hides the clouds again.
-5. TODO: Part 2 interaction
-6. TODO: Part 3 interaction
+### Other Members
+- **Haocheng Gong:** [Explain how users interact with your mechanic.]
+- **Yuanze Lin:** [Explain how users interact with your mechanic.]
+- **JunYu:** [Explain how users interact with your mechanic.]
 
-**Tips:** TODO: e.g. Use Chrome, full screen. If it lags, lower `P1_CLOUD.COUNT`.
-
----
-
-## 7. File Structure
-
-```
-TODO-repo-name/
-├── index.html
-├── sketch.js           # setup, draw, windowResized; calls each part
-├── perlin-noise.js     # Part 1 – fog & cloud pattern (Kristen)
-├── TODO.js             # Part 2 – TODO
-├── TODO.js             # Part 3 – TODO
-├── assets/
-│   └── TODO.png        # cloud pattern guide image
-└── README.md
-```
-
----
-
-## 8. Code Comments
-
-Each file has a header that says who wrote it and what it does. AI-assisted and borrowed code is marked inline, like this:
-
-```js
-// [AI] This code was generated with the help of Claude and does ...
-// [REF] This technique is from https://...
-```# 9103-groupC
+## 7. Code Comments
+Each member must:
+- Use clear variable and function names.
+- Explain main functions, key calculations, and non-obvious behaviour.
+- Briefly explain tools or techniques used beyond the course and cite their sources.
+- Mark AI-assisted code with the tool name and what the code does.
+- Mark borrowed or adapted code with its source link and explain any changes.
