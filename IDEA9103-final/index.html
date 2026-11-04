@@ -26,13 +26,13 @@
     }
   </style>
 
-  <!-- p5.js 1.9.4 (preload does not work in 2.0+) -->
-  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
-  <!-- p5.sound: needed for Yuanze's audio part -->
-  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/addons/p5.sound.min.js"></script>
+  <!-- Local p5 core; audio-change.js uses the native Web Audio API. -->
+  <script src="libraries/p5.min.js"></script>
 </head>
 <body>
   <!-- Order matters: sketch.js first, then perlin-noise.js -->
+  <p id="audio-story-hint" role="status" aria-live="polite">移动鼠标唤醒画卷，再点击天钟聆听</p>
+  <script src="audio-change.js"></script>
   <script src="sketch.js"></script>
   <script src="perlin-noise.js"></script>
 </body>

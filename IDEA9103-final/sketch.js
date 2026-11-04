@@ -24,6 +24,8 @@ function setup() {
   calculateCanvasSize();
   createCanvas(canvasWidth, canvasHeight);
   smooth();
+  frameRate(60);
+  setupAudioChange();
 }
 
 function draw() {
@@ -32,6 +34,7 @@ function draw() {
     isIdle = true;
   }
   
+  updateMusic();
   background(40, 32, 28); 
 
   // ==========================================
@@ -87,6 +90,7 @@ function draw() {
   // 【图层 8】：全屏鼠标交互与提灯 (Junyu - User Input)
   // ==========================================
   drawJunyuInput(isIdle, mouseX, mouseY);
+  drawMusicHint();
 }
 
 // ==========================================
@@ -97,6 +101,7 @@ function mouseMoved() {
   isIdle = false;
 }
 function mousePressed() {
+  if (!YuanzeAudio.isBellHit(mouseX, mouseY)) return;
   lastActiveTime = millis();
   isIdle = false;
 }
@@ -113,7 +118,10 @@ function mouseDragged() {
 // Kristen 的两个函数会被 perlin-noise.js 覆盖（所以 perlin-noise.js 要后加载）
 function drawKristenClouds(idleState) { push(); pop(); }
 function drawKristenFog(idleState, mx, my) { push(); pop(); }
-function drawYuanzeDragons(idleState) { push(); pop(); }
+function drawYuanzeDragons(idleState) {
+  YuanzeAudio.setIdle(idleState);
+  drawHeavenDragons();
+}
 function drawJunyuInput(idleState, mx, my) { push(); pop(); }
 
 
