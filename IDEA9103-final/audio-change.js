@@ -186,19 +186,24 @@
         gray.pixels[i + 3] = Math.round(alpha + (255 - alpha) * (alpha / 255) * 0.4);
       }
       gray.updatePixels();
-      // 彩色版本的 HSV 饱和度提高 30%，保留色相、明度和透明通道。
-      // 在灰色副本生成后处理，石化状态不受影响；普通绘制和网格共用此版本。
+      // 把龙的彩色降到更柔和的古铜/棕石色，并保留透明与轮廓细节，
+      // 让它更自然地融入背景，不再像高饱和的醒目彩色浮在上层。
       img.loadPixels();
       for (let i = 0; i < img.pixels.length; i += 4) {
         if (img.pixels[i + 3] === 0) continue;
-        const maximum = Math.max(img.pixels[i], img.pixels[i + 1], img.pixels[i + 2]);
-        const minimum = Math.min(img.pixels[i], img.pixels[i + 1], img.pixels[i + 2]);
-        const chroma = maximum - minimum;
-        if (chroma === 0) continue;
-        const saturationScale = Math.min(1.3, maximum / chroma);
-        for (let channel = 0; channel < 3; channel++) {
-          img.pixels[i + channel] = Math.round(maximum - (maximum - img.pixels[i + channel]) * saturationScale);
-        }
+        let r = img.pixels[i], g = img.pixels[i + 1], b = img.pixels[i + 2];
+        const brightness = (r + g + b) / 3;
+        // 让龙更接近下层海浪的棕黄/赭褐色，不再偏中性灰。
+        const earthR = Math.round(lerp(r, brightness, 0.22) * 0.96 + 30);
+        const earthG = Math.round(lerp(g, brightness, 0.18) * 0.88 + 28);
+        const earthB = Math.round(lerp(b, brightness, 0.28) * 0.78 + 18);
+        const warmMix = 0.75;
+        r = Math.round(r * (1 - warmMix) + earthR * warmMix);
+        g = Math.round(g * (1 - warmMix) + earthG * warmMix);
+        b = Math.round(b * (1 - warmMix) + earthB * warmMix);
+        img.pixels[i] = constrain(r, 40, 255);
+        img.pixels[i + 1] = constrain(g, 30, 255);
+        img.pixels[i + 2] = constrain(b, 20, 255);
       }
       img.updatePixels();
       save({ color: img, gray, puppet: createPuppetMesh(pins, limbs, torsoPath) });
@@ -701,7 +706,8 @@
     // 彩色恢复后淡去石化底层，避免浅灰层改变正常彩色状态的外观。
     // colorMix 为 0 时完全不叠加原彩色图片。
     if (colorMix > 0) {
-      tint(255, 255 * colorMix);
+      // 直接向下层的棕黄/赭色调做染色，保持古朴而不发灰。
+      tint(215, 170, 120, 255 * colorMix);
       image(dragon.color, 0, 0, w, h);
     }
     pop();
