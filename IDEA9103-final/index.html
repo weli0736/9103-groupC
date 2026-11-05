@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IDEA9103 - Awakening Heaven</title>
   
-  <!-- 引入 p5.js -->
+  <!-- Load p5.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
   
   <style>
@@ -16,7 +15,7 @@
       width: 100%;
       height: 100%;
       background: rgb(40, 32, 28);
-      overflow: hidden; /* 防止出现滚动条 */
+      overflow: hidden; /* Prevent scrollbars */
       display: flex;
       justify-content: center;
       align-items: center;
@@ -25,22 +24,22 @@
       display: block;
       cursor: none; /* Junyu: hide default cursor */
     }
-    /* 隐藏提示文字，由 audio-change.js 的 drawMusicHint 渲染在画布上 */
+    /* Hide the hint text; drawMusicHint in audio-change.js renders it on the canvas */
     #audio-story-hint {
       display: none;
     }
   </style>
 </head>
 <body>
-  <!-- 1. Yuanze 音频模块所需的提示容器 -->
-  <p id="audio-story-hint" role="status" aria-live="polite">移动鼠标唤醒画卷，再点击天钟聆听</p >
+  <!-- 1. Hint container required by Yuanze's audio module -->
+  <p id="audio-story-hint" role="status" aria-live="polite">移动鼠标唤醒画卷，再点击天钟聆听</p>
 
-  <!-- 2. 依次加载各组员的模块化 JS 文件 -->
-  <script src="audio-change.js"></script> <!-- Yuanze: 音频与神龙 -->
-  <script src="timebase-2.js"></script>   <!-- Haocheng: 底部时间特效与背景 -->
-  <script src="timebase-1.js"></script>   <!-- Haocheng: 顶部日月循环 -->
+  <!-- 2. Load each team member's JavaScript module in order -->
+  <script src="audio-change.js"></script> <!-- Yuanze: Audio & Dragon -->
+  <script src="timebase-2.js"></script>   <!-- Haocheng: Bottom Time Effects & Background -->
+  <script src="timebase-1.js"></script>   <!-- Haocheng: Top Sun & Moon Cycle -->
   <script src="user-input.js"></script>   <!-- Junyu: User Input & Lantern -->
-  <script src="sketch.js"></script>       <!-- 总控调度 (Main Dispatcher) -->
-  <script src="perlin-noise.js"></script> <!-- Kristen: 迷雾云层 (必须最后) -->
+  <script src="sketch.js"></script>       <!-- Main Dispatcher -->
+  <script src="perlin-noise.js"></script> <!-- Kristen: Fog & Clouds (must load last) -->
 </body>
 </html>
