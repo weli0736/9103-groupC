@@ -4,7 +4,7 @@
 
 Our project draws inspiration from ancient Chinese mythology and the aesthetic of the Mawangdui Silk Banner. We explore the philosophical relationship between an artwork and its audience. Through coding, we express this theme via a continuous interactive cycle:
 
-The experience follows four connected states:
+The experience follows 5 connected states:
 
 **Slumber → Awakening → Observation → Resonance → Oblivion **
 
