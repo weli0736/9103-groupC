@@ -1,40 +1,39 @@
-
- // =============================================================
- // IDEA9103 - Main Sketch (Global Dispatcher)
- // Lead/Time-base: Haocheng Gong
- // =============================================================
+// =============================================================
+// IDEA9103 - Main Sketch (Global Dispatcher)
+// Lead/Time-base: Haocheng Gong
+// =============================================================
 
 let bgBase, bgElements;
 let yutuImg, jinwuImg;
 
-// 引入你的两个模块实例
+// Haocheng's two time-base module instances
 let timebase2, timebase1;
 
-// 交互与闲置状态管理
+// Interaction and idle state management
 let lastActiveTime = 0;
 let isIdle = true;
 let idleThreshold = 10000;
 
 function preload() {
-  // 统一从 photo/ 文件夹加载资源，加入报错提示
-  bgBase = loadImage('photo/bg1.png', null, () => console.error('找不到 bg1.png'));
-  bgElements = loadImage('photo/bg2.png', null, () => console.error('找不到 bg2.png'));
-  yutuImg = loadImage('photo/yutu1.png', null, () => console.error('找不到 yutu1.png'));
-  jinwuImg = loadImage('photo/jinwu1.png', null, () => console.error('找不到 jinwu1.png'));
+  // Load all assets from the photo/ folder, with error messages
+  bgBase = loadImage('photo/bg1.png', null, () => console.error('Cannot find bg1.png'));
+  bgElements = loadImage('photo/bg2.png', null, () => console.error('Cannot find bg2.png'));
+  yutuImg = loadImage('photo/yutu1.png', null, () => console.error('Cannot find yutu1.png'));
+  jinwuImg = loadImage('photo/jinwu1.png', null, () => console.error('Cannot find jinwu1.png'));
 }
 
 function setup() {
-  // 画布尺寸严格对齐底层背景图
+  // Match the canvas size to the base background image
   createCanvas(bgBase.width, bgBase.height);
   smooth();
   frameRate(60);
 
-  // 初始化 Yuanze 的音频系统 (若存在)
+  // Initialize Yuanze's audio system (if loaded)
   if (typeof setupAudioChange === 'function') {
     setupAudioChange();
   }
 
-  // 初始化你的时间基底模块
+  // Initialize Haocheng's time-base modules
   timebase2 = new TimeBase2Module(width, height);
   timebase1 = new TimeBase1Module(width, height);
 
@@ -45,12 +44,12 @@ function setup() {
 }
 
 function draw() {
-  // 1. 全局闲置状态检测
+  // 1. Check the global idle state
   if (millis() - lastActiveTime > idleThreshold) {
     isIdle = true;
   }
 
-  // 2. 刷新音频状态
+  // 2. Update the audio state
   if (typeof updateMusic === 'function') {
     updateMusic();
   }
@@ -58,51 +57,51 @@ function draw() {
   background(40, 32, 28);
 
   // ==========================================
-  // 【图层 1】：底层纯背景肌理 (bg1)
+  // [Layer 1]: Base background texture (bg1)
   // ==========================================
   blendMode(BLEND);
   imageMode(CORNER);
   image(bgBase, 0, 0, width, height);
 
   // ==========================================
-  // 【图层 2】：Kristen 的底层背景祥云流动
+  // [Layer 2]: Kristen's flowing background clouds
   // ==========================================
   if (typeof drawKristenClouds === 'function') {
     drawKristenClouds(isIdle);
   }
 
   // ==========================================
-  // 【图层 3】：timebase-2 (迷雾下方的底画：bg2、海浪、树果实、钟光效)
+  // [Layer 3]: timebase-2 (scene under the fog: bg2, waves, tree fruits, bell glow)
   // ==========================================
   timebase2.display(bgElements);
 
   // ==========================================
-  // 【图层 4】：Yuanze 的神龙 (夹在迷雾和背景之间)
+  // [Layer 4]: Yuanze's dragons (between the background and the fog)
   // ==========================================
   imageMode(CENTER);
   drawYuanzeDragons(isIdle);
 
   // ==========================================
-  // 【图层 5】：Kristen 的全屏厚重迷雾 (Fog)
+  // [Layer 5]: Kristen's full-screen thick fog
   // ==========================================
   if (typeof drawKristenFog === 'function') {
     drawKristenFog(isIdle, mouseX, mouseY);
   }
 
   // ==========================================
-  // 【图层 6】：timebase-1 (迷雾上层的日月循环，联动迷雾消散)
+  // [Layer 6]: timebase-1 (sun and moon cycle above the fog, linked to fog clearing)
   // ==========================================
   timebase1.display();
 
   // ==========================================
-  // 【图层 7】：Junyu 的鼠标交互长信宫灯
+  // [Layer 7]: Junyu's mouse-controlled Changxin Palace Lantern
   // ==========================================
   if (typeof drawJunyuLantern === 'function') {
     drawJunyuLantern(isIdle);
   }
 
   // ==========================================
-  // 【图层 8】：交互提示文字 (Yuanze - Audio)
+  // [Layer 8]: Interaction hint text (Yuanze - Audio)
   // ==========================================
   if (typeof drawMusicHint === 'function') {
     drawMusicHint();
@@ -110,7 +109,7 @@ function draw() {
 }
 
 // ==========================================
-// 全局交互监听 (唤醒画卷与敲钟)
+// Global input listeners (awaken the scroll and ring the bell)
 // ==========================================
 function mouseMoved() {
   lastActiveTime = millis();
@@ -118,13 +117,13 @@ function mouseMoved() {
 }
 
 function mouseDragged() {
-  // 防止长按拖动被判定为闲置
+  // Keep long press-and-drag from counting as idle
   lastActiveTime = millis();
   isIdle = false;
 }
 
 function mousePressed() {
-  // 检测是否敲击天钟以触发音乐切换
+  // Check if the heavenly bell was clicked to switch the music
   if (typeof YuanzeAudio !== 'undefined' && typeof YuanzeAudio.isBellHit === 'function') {
     if (!YuanzeAudio.isBellHit(mouseX, mouseY)) return;
   }
@@ -133,7 +132,7 @@ function mousePressed() {
 }
 
 // ==========================================
-// ⬇️ 组员模块钩子占位符 (防止未加载时报错) ⬇️
+// ⬇️ Team module hook placeholders (prevent errors if a module is not loaded) ⬇️
 // ==========================================
 function drawYuanzeDragons(idleState) {
   if (typeof YuanzeAudio !== 'undefined' && typeof YuanzeAudio.setIdle === 'function') {
