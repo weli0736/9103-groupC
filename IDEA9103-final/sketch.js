@@ -14,6 +14,9 @@ let lastActiveTime = 0;
 let isIdle = true;
 let idleThreshold = 10000;
 
+// Canvas reference for responsive scaling
+let cnv;
+
 function preload() {
   // Load all assets from the photo/ folder, with error messages
   bgBase = loadImage('photo/bg1.png', null, () => console.error('Cannot find bg1.png'));
@@ -24,7 +27,8 @@ function preload() {
 
 function setup() {
   // Match the canvas size to the base background image
-  createCanvas(bgBase.width, bgBase.height);
+  cnv = createCanvas(bgBase.width, bgBase.height);
+  fitCanvas(); // Scale the canvas to fit the window on load
   smooth();
   frameRate(60);
 
@@ -141,4 +145,20 @@ function drawYuanzeDragons(idleState) {
   if (typeof drawHeavenDragons === 'function') {
     drawHeavenDragons();
   }
+}
+
+// ==========================================
+// Responsive scaling (fit the canvas to the browser window)
+// ==========================================
+
+// Scale the canvas display size to fit the window and keep the image ratio
+function fitCanvas() {
+  const s = min(windowWidth / width, windowHeight / height);
+  cnv.style('width', width * s + 'px');
+  cnv.style('height', height * s + 'px');
+}
+
+// p5 calls this automatically when the browser window is resized
+function windowResized() {
+  fitCanvas();
 }
