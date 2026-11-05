@@ -1,5 +1,7 @@
 // =============================================================
-// timebase-1.js · Haocheng Gong · Sun & Moon Cycle (Clean, Large, Safe Bounds)
+// timebase-1.js 
+// Author: Haocheng Gong 
+// Role: Sun & Moon Cycle (Clean design, large scale, edge-safe)
 // =============================================================
 
 class TimeBase1Module {
@@ -14,11 +16,14 @@ class TimeBase1Module {
   }
 
   display() {
-    // 联动迷雾消散 (当 Kristen 迷雾推开时，日月跟随淡出)
+    // Link with the fog module. 
+    // [AI] Gemini helped map the fog's reveal value to the opacity 
+    // of the celestial cycle for a smooth fade-out effect.
     let fogReveal = (typeof p1 !== 'undefined') ? p1.reveal : 0;
     let interactionFade = constrain(map(fogReveal, 0, 0.5, 1.0, 0.0), 0.0, 1.0);
 
-    if (interactionFade <= 0.01) return; // 隐去时不渲染，保证流畅度
+    // Skip rendering entirely if fully faded out to save frame rate
+    if (interactionFade <= 0.01) return; 
 
     blendMode(BLEND);
     this.part2.display(interactionFade);
@@ -26,31 +31,38 @@ class TimeBase1Module {
 }
 
 // =============================================================
-// 核心架构：Class Part2 (极大化、无黑线、月亮纯净无光芒、绝对安全)
+// Core Mechanics: Part2 Class
+// Handles the 20-second celestial loop, breathing animations, 
+// and canvas boundary safety.
 // =============================================================
 class Part2 {
   constructor(w, h) {
     this.updateSize(w, h);
-    this.loopDuration = 20000; // 20秒循环
+    this.loopDuration = 20000; // Full day/night cycle takes 20 seconds
   }
 
   updateSize(w, h) {
     this.w = w;
     this.h = h;
     
-    // 【极大化尺寸】：本体占比 22%
+    // Set a massive celestial scale (22% of canvas width) for strong visual impact
     this.celestialSize = this.w * 0.22;  
     
-    // 【位置下移】：给上方的火焰留出空间
+    // Lower the center point to leave enough room for the top arch
     this.centerX = this.w / 2;
     this.centerY = this.h * 0.82; 
     
-    // 【绝对安全半径计算】：预留0.85倍的本体大小作为边距，确保火焰绝不出界
+    // Calculate a dynamic safe radius based on canvas size.
+    // [AI] Gemini assisted with this dynamic safe-radius calculation 
+    // to ensure the celestial bodies and their flames never render outside the canvas.
     let padding = this.celestialSize * 0.85; 
     let maxRadiusX = this.w / 2 - padding; 
     let maxRadiusY = this.centerY - padding; 
+    
+    // Take the minimum value to guarantee safety on both axes
     this.radius = Math.min(maxRadiusX, maxRadiusY); 
     
+    // Off-screen buffer for the seamless moon phase mask
     if (this.moonBuffer) {
       this.moonBuffer.remove();
     }
@@ -61,6 +73,7 @@ class Part2 {
     push();
     let timeProgress = (millis() % this.loopDuration) / this.loopDuration;
 
+    // Map the 0-1 progress to separate rising and setting phases for both sun and moon
     let sunProgress = timeProgress < 0.5 ? map(timeProgress, 0, 0.5, 0, 1) : map(timeProgress, 0.5, 1.0, 1, 0);
     let moonProgress = timeProgress < 0.5 ? map(timeProgress, 0, 0.5, 1, 0) : map(timeProgress, 0.5, 1.0, 0, 1);
     
@@ -72,7 +85,7 @@ class Part2 {
     pop();
   }
 
-  // ================= 星火粒子特效 =================
+  // ================= Particle Sparks System =================
   drawSparks(progress, startAngle, endAngle, isSun, fade) {
     drawingContext.shadowBlur = 15; 
     drawingContext.shadowColor = isSun ? color(255, 100, 20, 255 * fade) : color(120, 180, 255, 255 * fade); 
@@ -85,9 +98,13 @@ class Part2 {
         let sa = map(sparkP, 0, 1, startAngle, endAngle);
         let sx = this.centerX + cos(sa) * this.radius;
         let sy = this.centerY - sin(sa) * this.radius;
+        
+        // Scatter particles randomly around the main body
         let randX = sin(i * 123.45) * (this.celestialSize * 0.45);
         let randY = cos(i * 678.90) * (this.celestialSize * 0.45);
         let sparkAlpha = map(i, 0, sparkCount, 255, 0) * progress * fade; 
+        
+        // Add a twinkling effect using time and index
         let twinkle = map(sin(millis() / 150 + i * 2), -1, 1, 0.2, 1);
         let sparkSize = map(sin(i * 77), -1, 1, 5, 15); 
         
@@ -101,36 +118,39 @@ class Part2 {
     }
   }
 
-  // ================= 太阳核心模块（纯净火焰、无黑线缝隙） =================
+  // ================= Sun Module =================
   drawSun(progress, isRising, fade) {
     push();
     let angle = map(progress, 0, 1, 0, HALF_PI - 0.15); 
     let sunX = this.centerX + cos(angle) * this.radius;
     let sunY = this.centerY - sin(angle) * this.radius; 
     
+    // Only draw sparks as the sun is rising
     if (isRising) this.drawSparks(progress, 0, HALF_PI - 0.15, true, fade);
 
     translate(sunX, sunY);
     let currentAlpha = map(progress, 0, 1, 40, 255) * fade; 
     
-    // 呼吸特效：放大缩小 4%
+    // Add a subtle 4% heartbeat scaling effect
     let breathScale = 1 + sin(millis() / 800) * 0.04; 
     scale(breathScale); 
     
-    // 太阳本体全局发光
+    // [REF] HTML5 Canvas shadowBlur: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/shadowBlur
+    // Used drawingContext to create a native, soft glowing halo behind the sun.
     drawingContext.shadowBlur = 35; 
     drawingContext.shadowColor = color(255, 60, 10, currentAlpha); 
     
-    // 双层张扬火焰
+    // Draw the aggressive double-layered flames
     push();
-    rotate(millis() / 2000); 
+    rotate(millis() / 2000); // Slow constant rotation
     let numRays = 24; 
-    // 【关键修复】：把火焰的内部半径(innerR)压进极深的核心，防止和外围圆盘产生缝隙漏出“黑线”底色
+    
+    // Push the inner radius deep inside to prevent black gap artifacts
     let innerR = this.celestialSize * 0.1; 
     let baseOuterR = this.celestialSize * 0.85; 
     
     drawingContext.shadowBlur = 10;
-    noStroke(); // 强制无描边，杜绝任何黑线
+    noStroke(); // Crucial: removes outlines to keep the flames perfectly clean
     let time = millis() / 500; 
     
     for (let i = 0; i < numRays; i++) {
@@ -138,20 +158,23 @@ class Part2 {
       push();
       rotate(a);
       
+      // Calculate dynamic swaying and stretching for the flame tips
       let wave = sin(i * 2 + time); 
       let dynOuterR = baseOuterR + wave * 15; 
       let sway = cos(i * 3 + time * 1.5) * 18; 
       
       for(let j = 2; j > 0; j--) {
         if(j === 2) {
-          fill(255, 120, 20, currentAlpha * 0.35); // 外焰
+          fill(255, 120, 20, currentAlpha * 0.35); // Outer flame
         } else {
-          fill(255, 180, 50, currentAlpha * 0.7);  // 内焰
+          fill(255, 180, 50, currentAlpha * 0.7);  // Inner bright flame
         }
         let curOuter = dynOuterR * (j === 2 ? 1 : 0.75);
         let curSway = sway * (j === 2 ? 1 : 0.6);
         let widthFactor = 7 * j; 
 
+        // [REF] Bezier Curves: https://p5js.org/reference/p5/bezierVertex/
+        // Used to mathematically generate the curved, swaying tips of the flames without static images.
         beginShape();
         vertex(innerR * 0.9, widthFactor);
         bezierVertex(
@@ -171,7 +194,7 @@ class Part2 {
     pop();
     drawingContext.shadowBlur = 0; 
 
-    // 太阳渐变圆盘本体 (覆盖在火焰根部之上，完美融合)
+    // Draw the solid sun disk over the flame roots for seamless blending
     noStroke();
     for (let i = 5; i > 0; i--) {
       let rRatio = i / 5;
@@ -180,7 +203,7 @@ class Part2 {
       circle(0, 0, this.celestialSize * rRatio);
     }
 
-    // 金乌显现
+    // Blend the Golden Crow (Jinwu) image
     let birdAlpha = (progress > 0.5 ? map(progress, 0.6, 0.9, 0, 255, true) : 0) * fade;
     if (birdAlpha > 5) {
       push();
@@ -193,7 +216,7 @@ class Part2 {
     pop(); 
   }
 
-  // ================= 月亮核心模块（无射线光芒，纯净版） =================
+  // ================= Moon Module =================
   drawMoon(progress, isRising, fade) {
     push();
     let angle = map(progress, 0, 1, PI, HALF_PI + 0.15); 
@@ -205,11 +228,11 @@ class Part2 {
     let currentAlpha = map(progress, 0, 1, 40, 255) * fade; 
     translate(moonX, moonY);
     
-    // 月亮呼吸特效
+    // Moon heartbeat breathing effect
     let breathScale = 1 + sin(millis() / 800) * 0.04; 
     scale(breathScale); 
 
-    // 月亮底背发光 (纯净版：完全没有任何冰芒射线，只有光晕)
+    // Base glowing halo for the moon (kept pure and soft, no sharp rays)
     drawingContext.shadowBlur = 40; 
     drawingContext.shadowColor = color(150, 200, 255, currentAlpha); 
     noStroke();
@@ -217,7 +240,7 @@ class Part2 {
     circle(0, 0, this.celestialSize * 1.2);
     drawingContext.shadowBlur = 0; 
     
-    // 离屏无痕遮罩抠月相
+    // Off-screen masking trick to create a flawless moon phase transition
     let pg = this.moonBuffer;
     let pgCenter = pg.width / 2;
     pg.clear(); 
@@ -230,7 +253,7 @@ class Part2 {
       pg.circle(pgCenter, pgCenter, this.celestialSize * rRatio);
     }
 
-    pg.erase(); 
+    pg.erase(); // Erase mode acts as a mask
     let maskStartX = this.celestialSize * 0.35; 
     let maskEndX = this.celestialSize * 1.3;
     let maskX = map(progress, 0, 1, maskStartX, maskEndX);
@@ -239,7 +262,7 @@ class Part2 {
 
     image(pg, 0, 0);
 
-    // 玉兔显现
+    // Blend the Jade Rabbit (Yutu) image
     let rabbitAlpha = (progress > 0.5 ? map(progress, 0.6, 0.9, 0, 255, true) : 0) * fade;
     if (rabbitAlpha > 5) {
       push();
