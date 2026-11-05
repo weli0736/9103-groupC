@@ -1,8 +1,4 @@
 // =============================================================
-// Technique: Domain warping (not covered in class)
-// Source: Inigo Quilez, "Domain Warping" – https://iquilezles.org/articles/warp/
-// How it works: one noise value offsets the input of another noise call.
-// This bends the pattern and creates natural, flowing fog.
 // perlin-noise.js — Kristen Li — Heavenly Cloud Layer
 //
 // 1. Moon-white fog:
@@ -21,17 +17,55 @@
 // Load this file after sketch.js.
 // Actual layer order depends on the drawing order in sketch.js.
 //
-// Attribution:
-//    [REF] identifies external references and image sources.
-//    [AI] identifies Claude-assisted sections based on the
-//    author's declared use of AI.
+// -------------------------------------------------------------
+// REFERENCES
+// -------------------------------------------------------------
+// [REF 1] Cloud image (photo/cloud.png)
+//    Han Dynasty cloud-and-vapour pattern (云气纹), found on Pinterest.
+//    https://ch.pinterest.com/pin/5488830777107015/
+//    Used only as a guide map for particle paths and the faint base pattern.
+//
+// [REF 2] Perlin noise (covered in class)
+//    p5.js noise(): https://p5js.org/reference/p5/noise/
+//    Close inputs give close outputs, so the fog looks soft.
+//
+// [REF 3] Domain warping (not covered in class) — used in _renderFog()
+//    Inigo Quilez, "Domain Warping": https://iquilezles.org/articles/warp/
+//    Idea: replace f(p) with f(p + h(p)). Noise bends the input of noise.
+//    Our version is simpler. One noise value (w) shifts x and y once,
+//    then we sample noise again at the shifted point.
+//    Quilez uses two fbm calls for a 2D offset and warps twice.
+//    We also add a second, finer noise layer (0.65 + 0.35) for detail,
+//    like a simple two-layer fbm.
+//
+// [REF 4] Image gradient (not covered in class) — used in gradientAt()
+//    https://en.wikipedia.org/wiki/Image_gradient
+//    Central difference: gx = right - left, gy = below - above (2 px apart).
+//    (gx, gy) points towards stronger lines.
+//    (-gy, gx) is perpendicular to it, so particles move along the contour.
+//
+// [REF 5] Noise-driven particle movement — daydev, OpenProcessing
+//    https://openprocessing.org/@daydev/2659627/
+//    The reference maps noise values to movement angles.
+//    Here, the gradient sets the main direction.
+//    Noise only adds a small rotation.
+//
+// [REF 6] Smoothstep (not covered in class) — _renderFog(), fogDensityAt()
+//    https://en.wikipedia.org/wiki/Smoothstep
+//    s = t * t * (3 - 2t). It eases from 0 to 1 with no hard edge.
+//
+// [REF 7] p5.js buffers and pixels
+//    createGraphics(): https://p5js.org/reference/p5/createGraphics/
+//    erase():          https://p5js.org/reference/p5/erase/
+//    pixels[]:         https://p5js.org/reference/p5/pixels/
+//
+// [REF 8] Float32Array (JavaScript typed array) — used in _buildFogGrid()
+//    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array
+//    Stores one number per fog cell. Faster than a normal array for large grids.
+//
+// [AI] marks Claude-assisted sections, based on the author's
+//    declared use of AI.
 // =============================================================
-
-
-// =============================================================
-// SETTINGS
-// =============================================================
-
 // -------------------------------------------------------------
 // 1. Fog appearance, rendering, and interaction
 // -------------------------------------------------------------
@@ -904,7 +938,8 @@ function drawKristenClouds(idleState) {
   p1System().displayCloud();
 }
 
-// Intended Layer 7: above sun/moon glow, below the lantern.
+// Intended Layer 5: above the dragons, below the sun/moon cycle.
+// The actual order is determined by calls in sketch.js.
 // mx and my are retained for framework compatibility.
 // This version reads p5.js mouseX and mouseY inside update().
 function drawKristenFog(idleState, mx, my) {
