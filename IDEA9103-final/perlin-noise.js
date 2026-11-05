@@ -1,4 +1,8 @@
 // =============================================================
+// Technique: Domain warping (not covered in class)
+// Source: Inigo Quilez, "Domain Warping" – https://iquilezles.org/articles/warp/
+// How it works: one noise value offsets the input of another noise call.
+// This bends the pattern and creates natural, flowing fog.
 // perlin-noise.js — Kristen Li — Heavenly Cloud Layer
 //
 // 1. Moon-white fog:
