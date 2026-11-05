@@ -15,19 +15,20 @@ The experience follows four connected states:
 
 ### Individual Inspirations
 - **Kristen Li:** Chinese cloud motifs, mist in landscape paintings, and soft  moonlight inspired the fog and golden cloud particles. The cloud guide image comes from《中国纹样全集》, accessed through [Pinterest](https://ch.pinterest.com/pin/5488830777107015/).
-- **Haocheng Gong:** [Add your specific inspirations and their influence.]
+- **Haocheng Gong:** My visual design is deeply inspired by the mythical elements of the Mawangdui silk painting and ancient Chinese cosmology. The Golden Crow (Jinwu) and Jade Rabbit (Yutu) represent the eternal cycle of the sun and moon. The glowing bronze bell and pulsing tree fruits represent the dormant energy of heaven waiting to be awakened.
 - **Yuanze Lin:** [Add your specific inspirations and their influence.]
 - **Junyu Cai:** [Add your specific inspirations and their influence.]
 ## 2. Techniques
 The project uses p5.js. `sketch.js` coordinates the main scene. Each mechanic responds to shared interaction and idle states.
 
-### Time-based Animation — Haocheng Gong
-- Use `millis()` to track inactivity. Mouse movement or clicks reset the timer.
-- Share `isIdle` with the other mechanics after 10 seconds without input.
-- Run a 20-second sun and moon cycle during idle mode.
-- During awakening, pause this cycle and use time to animate Fusang fruit growth and the toad’s gentle floating motion.
+### Time-based Animation & Layer Dispatcher — Haocheng Gong
+- Use `millis()` in `sketch.js` to manage the global `lastActiveTime` and `isIdle` state, coordinating all other members' modules centrally.
+- Structure the scene with a dual-timebase architecture to seamlessly sandwich the fog layer: `timebase-2.js` (below the fog) and `timebase-1.js` (above the fog).
+- **Above Fog (`timebase-1.js`):** Implement a 20-second Sun and Moon cycle. Use `Math.min()` to calculate a dynamic safe-rendering radius, ensuring the giant celestial bodies always stay within the canvas boundaries. Use `sin()` combined with `scale()` to create a heartbeat-like breathing animation. Read the fog's `reveal` value to dynamically map the opacity, allowing the celestial bodies to fade out smoothly as the fog clears.
+- **Below Fog (`timebase-2.js`):** Use `sin()`, `cos()`, and `beginShape()` to generate a 10-second continuous flowing wave loop with traditional fine-line textures. Use `pow()` to smoothly attenuate the alpha values for the glowing tree fruits and the bronze bell's breathing halo.
+- Optimize rendering performance by replacing excessive `drawingContext.shadowBlur` with lightweight, layered semi-transparent geometric fills, ensuring a stable 60 FPS experience.
 
-**Key decision:** One shared timer keeps all mechanics in the same state.
+**Key decision:** Splitting the time-based visuals into two separate files (`timebase-1` and `timebase-2`) allows the Perlin noise fog to perfectly sandwich the environment. Calculating the dynamic safe radius ensures the layout adapts flawlessly without clipping the celestial bodies.
 
 ### User Input — Junyu Cai
 - Read mouse movement to activate the lantern and reset inactivity.
@@ -58,7 +59,7 @@ The project uses p5.js. `sketch.js` coordinates the main scene. Each mechanic re
 ## 3. Mechanics and Responsibilities
 | Member | Mechanic | Main responsibilities |
 | --- | --- | --- |
-| Haocheng Gong | Time-based animation | Shared idle timer, `isIdle`, sun and moon cycle, Fusang fruit growth, and toad animation. |
+| Haocheng Gong | Global Dispatcher & Time-based animation | Set up the main framework and shared isIdle timer. Render the dual-layer time-based visuals: the 20-second Sun and Moon cycle, the 10-second wave loop, pulsing tree fruits, and the bronze bell's breathing glow.|
 | Junyu Cai | User input | Lantern colour and glow, mouse interaction, and cycling through three sounds on clicks. |
 | Kristen Li | Perlin noise | Full-screen fog, gradual mouse-based revealing, golden cloud patterns, and fog restoration. |
 | Yuanze Lin | Audio feedback | Dragon colour, amplitude-driven scaling, rotation, and audio fade-out during idle mode. |
@@ -67,7 +68,7 @@ The project uses p5.js. `sketch.js` coordinates the main scene. Each mechanic re
 | Member | Mechanic / File | What it does |
 | --- | --- | --- |
 | Kristen | Heavenly fog and cloud patterns / `perlin-noise.js` | Slowly reveals golden cloud patterns through mouse movement and restores fog when idle. |
-| Haocheng Gong | [Mechanic / file] | Provides `isIdle`. [Add your mechanic’s main behaviour.] |
+| Haocheng Gong | Global control & Time-based visuals | sketch.js provides global isIdle state and manages the layer rendering order. timebase-1.js renders the massive Sun and Moon cycle above the fog (fading out when cleared). timebase-2.js renders the background elements, flowing waves, pulsing fruits, and bell glow beneath the fog.|
 | Yuanze Lin | [Mechanic / file] | [Describe what your mechanic does.] |
 | JunYu | [Mechanic / file] | [Describe what your mechanic does.] |
 
@@ -82,9 +83,13 @@ I developed the particle effect concept, selected the guide image, reviewed the 
 **ChatGPT** helped organise, shorten, and translate this README.
 
 
-### Other Members
-- **Haocheng Gong:** [Name the AI tool, its purpose, and how the assisted code works. Write “None” if unused.]
+### Haocheng Gong
+I used **Gemini** to assist with code modularization, performance optimization, and mathematical calculations for the visual layout. The assisted code refactored `sketch.js` into a pure global layer dispatcher. 
+To eliminate rendering lag and maintain 60 FPS, Gemini helped replace high-cost `shadowBlur` effects with layered semi-transparent geometric fills in the time-based modules. 
+It also generated the `Math.min()` logic to calculate a dynamic safe radius (ensuring the giant celestial bodies never render outside the canvas) and helped map the fog's `reveal` variable to smoothly fade out the sun and moon cycle.
+
 - **Yuanze Lin:** [Name the AI tool, its purpose, and how the assisted code works. Write “None” if unused.]
+
 - **JunYu:** [Name the AI tool, its purpose, and how the assisted code works. Write “None” if unused.]
 
 Mark each AI-assisted section in the actual code, for example:
@@ -101,9 +106,14 @@ Mark each AI-assisted section in the actual code, for example:
 - [p5.js — erase()](https://p5js.org/reference/p5/erase/): Used to fade old particle trails.
 - [Inigo Quilez — Domain Warping](https://iquilezles.org/articles/warp/): Referenced for distorting noise coordinates to create swirling fog.
 
-### Other Members
-- **Haocheng Gong:** [Add source links and explain what you used or adapted.]
+### Haocheng Gong
+  - **Visual Assets:** The images `bg1.png`, `bg2.png`, `yutu1.png`, and `jinwu1.png` were sourced from [Pinterest](https://www.pinterest.com/) and inspired by the aesthetic of ancient Chinese murals and the Mawangdui Silk Banner. They were further edited and modified to seamlessly blend into the project's mythical visual style.
+  - **p5.js — bezierVertex():** [https://p5js.org/reference/p5/bezierVertex/](https://p5js.org/reference/p5/bezierVertex/) Used to mathematically draw and animate the aggressive, curved double-layered flames of the sun without relying on static images.
+  - **HTML5 Canvas — shadowBlur:** [https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/shadowBlur](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/shadowBlur) Referenced to create the base global glow for the celestial bodies and the moon phase. I later optimized its usage by blending it with native `p5.js` geometric loops (`ellipse()`) to prevent frame rate drops.
+  - **Responsive Math Logic:** Adapted standard responsive design principles using `Math.min()` to dynamically calculate the maximum safe radius, ensuring the celestial bodies stay within canvas bounds regardless of the screen ratio.
+
 - **Yuanze Lin:** [Add source links and explain what you used or adapted.]
+  
 - **JunYu:** [Add source links and explain what you used or adapted.]
 
 Add source comments beside referenced or adapted code, for example:
@@ -117,8 +127,12 @@ Add source comments beside referenced or adapted code, for example:
 2. Watch golden cloud patterns appear. Fast movement does not increase the reveal speed.
 3. Stop moving. Once the scene becomes idle, fog gradually covers the patterns again.
 
-### Other Members
-- **Haocheng Gong:** [Explain how users interact with your mechanic.]
+### Haocheng Gong
+ — Heavenly Time Cycle & Environment:** 
+  1. **Observe the Idle State:** When you do not move the mouse, watch the massive Sun and Moon cycle majestically cross the sky above the fog, accompanied by dynamic breathing effects and glowing particle sparks.
+  2. **Awaken the World:** Move your mouse to clear the fog. As the fog dissipates, the Sun and Moon cycle will smoothly fade out to reveal the hidden world beneath.
+  3. **Explore the Hidden Flow:** Once the fog is cleared, observe the continuous 10-second environmental cycle: the stylized flowing waves at the bottom, the glowing and pulsing fruits on the divine trees, and the rhythmic breathing halo of the bronze bell.
+
 - **Yuanze Lin:** [Explain how users interact with your mechanic.]
 - **JunYu:** [Explain how users interact with your mechanic.]
 
