@@ -90,7 +90,8 @@ I used **Gemini** to assist with code modularization, performance optimization, 
 To eliminate rendering lag and maintain 60 FPS, Gemini helped replace high-cost `shadowBlur` effects with layered semi-transparent geometric fills in the time-based modules. 
 It also generated the `Math.min()` logic to calculate a dynamic safe radius (ensuring the giant celestial bodies never render outside the canvas) and helped map the fog's `reveal` variable to smoothly fade out the sun and moon cycle.
 
-### **Yuanze Lin:** I used ChatGPT to guide me on how to use VSCode to create puppet motion effects with user interactions and graphics, and I translated the comments and subtitle text.
+### **Yuanze Lin:** 
+I used ChatGPT to guide me on how to use VSCode to create puppet motion effects with user interactions and graphics, and I translated the comments and subtitle text.
 
 ### **JunYu Cai:** 
 I used ChatGPT to help write, organise, and debug JavaScript for user-input.js and to help explain the code. AI assistance was used for mouse-following, image crossfading, smooth transitions, glow gradients, and particle effects. The code uses mouse coordinates and the shared isIdle state to update the lantern each frame.
@@ -146,7 +147,8 @@ Add source comments beside referenced or adapted code, for example:
   2. **Awaken the World:** Move your mouse to clear the fog. As the fog dissipates, the Sun and Moon cycle will smoothly fade out to reveal the hidden world beneath.
   3. **Explore the Hidden Flow:** Once the fog is cleared, observe the continuous 10-second environmental cycle: the stylized flowing waves at the bottom, the glowing and pulsing fruits on the divine trees, and the rhythmic breathing halo of the bronze bell.
 
-### **Yuanze Lin:** 1.Move the mouse to wake up the scroll: The clouds gradually clear, revealing a pair of gray, still dragons. 
+### **Yuanze Lin:** 
+1.Move the mouse to wake up the scroll: The clouds gradually clear, revealing a pair of gray, still dragons. 
 
 2.Click on the celestial bell to trigger sounds: The first click plays a singing bowl sound, turning the dragons into color; the second click plays Chinese drums, making the dragons breathe and twist with the volume; the third click plays wind chimes, enhancing the dragons' twisting, while they slowly rotate and revolve.
 
