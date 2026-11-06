@@ -17,7 +17,7 @@ The experience follows 5 connected states:
 ### Individual Inspirations
 - **Kristen Li:** Chinese cloud motifs, mist in landscape paintings, and soft  moonlight inspired the fog and golden cloud particles. The cloud guide image comes from《中国纹样全集》, accessed through [Pinterest](https://ch.pinterest.com/pin/5488830777107015/).
 - **Haocheng Gong:** My visual design is deeply inspired by the mythical elements of the Mawangdui silk painting and ancient Chinese cosmology. The Golden Crow (Jinwu) and Jade Rabbit (Yutu) represent the eternal cycle of the sun and moon. The glowing bronze bell and pulsing tree fruits represent the dormant energy of heaven waiting to be awakened.
-- **Yuanze Lin:** [The inspiration comes from the two dragons in the Mawangdui silk painting and the idea of using sound to awaken ancient objects. I connect singing bowls, Chinese drums, and wind chimes with changes in the dragons’ colour, breathing, bending, and rotation, gradually bringing the still images to life. Clicking represents attention and awakening, while the dragons’ return to grey after interaction stops reflects the theme: “Death is not the end. Forgetting is.”.]
+- **Yuanze Lin:** The inspiration comes from the two dragons in the Mawangdui silk painting and the idea of using sound to awaken ancient objects. I connect singing bowls, Chinese drums, and wind chimes with changes in the dragons’ colour, breathing, bending, and rotation, gradually bringing the still images to life. Clicking represents attention and awakening, while the dragons’ return to grey after interaction stops reflects the theme: “Death is not the end. Forgetting is.”.
 - **Junyu Cai:**I was inspired by the Changxin Palace Lantern, an ancient Chinese bronze lamp. I designed a lantern-bearing figure as the mouse cursor to connect the viewer directly with the artwork. Its change from dark, aged bronze to warm gold represents the artwork waking up when someone pays attention to it.
 ## 2. Techniques
 The project uses p5.js. `sketch.js` coordinates the main scene. Each mechanic responds to shared interaction and idle states.
@@ -71,7 +71,7 @@ Use a radial gradient, a small glowing centre, and moving particles to change th
 | --- | --- | --- |
 | Kristen | Heavenly fog and cloud patterns / `perlin-noise.js` | Slowly reveals golden cloud patterns through mouse movement and restores fog when idle. |
 | Haocheng Gong | Global control & Time-based visuals | sketch.js provides global isIdle state and manages the layer rendering order. timebase-1.js renders the massive Sun and Moon cycle above the fog (fading out when cleared). timebase-2.js renders the background elements, flowing waves, pulsing fruits, and bell glow beneath the fog.|
-| Yuanze Lin | [Dragon pattern changes and interactive audio / audio-change.js] | [The user can play three sounds in order by clicking the clock, switch between the dragon's four states, and if they don't click for over ten seconds, it goes back to the default state.] |
+| Yuanze Lin | Dragon pattern changes and interactive audio / audio-change.js | The user can play three sounds in order by clicking the clock, switch between the dragon's four states, and if they don't click for over ten seconds, it goes back to the default state.
 | JunYu |Designed the lantern-bearing character and two visual states; implemented and tested cursor-following, blue-to-gold light, particles, and idle transition in user-input.js.
 
 ## 4. AI Acknowledgement
@@ -90,7 +90,7 @@ I used **Gemini** to assist with code modularization, performance optimization, 
 To eliminate rendering lag and maintain 60 FPS, Gemini helped replace high-cost `shadowBlur` effects with layered semi-transparent geometric fills in the time-based modules. 
 It also generated the `Math.min()` logic to calculate a dynamic safe radius (ensuring the giant celestial bodies never render outside the canvas) and helped map the fog's `reveal` variable to smoothly fade out the sun and moon cycle.
 
-- **Yuanze Lin:** [I used ChatGPT to guide me on how to use VSCode to create puppet motion effects with user interactions and graphics, and I translated the comments and subtitle text.]
+- **Yuanze Lin:** I used ChatGPT to guide me on how to use VSCode to create puppet motion effects with user interactions and graphics, and I translated the comments and subtitle text.
 
 - **JunYu:** Junyu Cai
 I used ChatGPT to help write, organise, and debug JavaScript for user-input.js and to help explain the code. AI assistance was used for mouse-following, image crossfading, smooth transitions, glow gradients, and particle effects. The code uses mouse coordinates and the shared isIdle state to update the lantern each frame.
@@ -117,7 +117,7 @@ Mark each AI-assisted section in the actual code, for example:
   - **HTML5 Canvas — shadowBlur:** [https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/shadowBlur](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/shadowBlur) Referenced to create the base global glow for the celestial bodies and the moon phase. I later optimized its usage by blending it with native `p5.js` geometric loops (`ellipse()`) to prevent frame rate drops.
   - **Responsive Math Logic:** Adapted standard responsive design principles using `Math.min()` to dynamically calculate the maximum safe radius, ensuring the celestial bodies stay within canvas bounds regardless of the screen ratio.
 
-- **Yuanze Lin:** [
+- **Yuanze Lin:** 
 -The audios references：
 - Singing bowl.mp3
 https://pixabay.com/sound-effects/film-special-effects-singing-bowl-hit-3-33366/
@@ -126,7 +126,7 @@ Chinese kit.mp3
 https://pixabay.com/sound-effects/musical-chinese-kit-231719/
 
 Wind Chimes.mp3
-https://pixabay.com/sound-effects/film-special-effects-wind-chimes-no-background-noise-57238/]
+https://pixabay.com/sound-effects/film-special-effects-wind-chimes-no-background-noise-57238/
   
 - **JunYu:** Junyu Cai
 - Visual inspiration: The Changxin Palace Lantern, an ancient Chinese bronze lamp, inspired the lantern-bearing cursor. I prepared the two character images used for its sleeping and awakened states.
@@ -150,11 +150,11 @@ Add source comments beside referenced or adapted code, for example:
   2. **Awaken the World:** Move your mouse to clear the fog. As the fog dissipates, the Sun and Moon cycle will smoothly fade out to reveal the hidden world beneath.
   3. **Explore the Hidden Flow:** Once the fog is cleared, observe the continuous 10-second environmental cycle: the stylized flowing waves at the bottom, the glowing and pulsing fruits on the divine trees, and the rhythmic breathing halo of the bronze bell.
 
-- **Yuanze Lin:** [1.Move the mouse to wake up the scroll: The clouds gradually clear, revealing a pair of gray, still dragons. 
+- **Yuanze Lin:** 1.Move the mouse to wake up the scroll: The clouds gradually clear, revealing a pair of gray, still dragons. 
 
 2.Click on the celestial bell to trigger sounds: The first click plays a singing bowl sound, turning the dragons into color; the second click plays Chinese drums, making the dragons breathe and twist with the volume; the third click plays wind chimes, enhancing the dragons' twisting, while they slowly rotate and revolve.
 
-3.Keep clicking or wait: Clicking again in the third stage will continue the sounds and movements; if you don’t click for 10 seconds, the sounds fade out, the dragons return to gray and still, and the next interaction starts over.]
+3.Keep clicking or wait: Clicking again in the third stage will continue the sounds and movements; if you don’t click for 10 seconds, the sounds fade out, the dragons return to gray and still, and the next interaction starts over.
 - **JunYu:** — Interactive Lantern Cursor
 1. Move the mouse across the artwork. The lantern-bearing figure follows the cursor and gradually changes from dark bronze and blue light to gold and yellow light over about five seconds.
 2. Observe the small glowing centre and light particles around the lantern.
