@@ -90,17 +90,13 @@ I used **Gemini** to assist with code modularization, performance optimization, 
 To eliminate rendering lag and maintain 60 FPS, Gemini helped replace high-cost `shadowBlur` effects with layered semi-transparent geometric fills in the time-based modules. 
 It also generated the `Math.min()` logic to calculate a dynamic safe radius (ensuring the giant celestial bodies never render outside the canvas) and helped map the fog's `reveal` variable to smoothly fade out the sun and moon cycle.
 
-- **Yuanze Lin:** I used ChatGPT to guide me on how to use VSCode to create puppet motion effects with user interactions and graphics, and I translated the comments and subtitle text.
+### **Yuanze Lin:** I used ChatGPT to guide me on how to use VSCode to create puppet motion effects with user interactions and graphics, and I translated the comments and subtitle text.
 
-- **JunYu:** Junyu Cai
+### **JunYu Cai:** 
 I used ChatGPT to help write, organise, and debug JavaScript for user-input.js and to help explain the code. AI assistance was used for mouse-following, image crossfading, smooth transitions, glow gradients, and particle effects. The code uses mouse coordinates and the shared isIdle state to update the lantern each frame.
 
 I developed the interaction concept, prepared the two character images, chose the visual effects, adjusted the timing, size, colour and light settings, and tested the results in VS Code. ChatGPT also helped edit the wording of my README sections.
 
-Mark each AI-assisted section in the actual code, for example:
-
-    // [AI] Claude helped generate this reveal mask.
-    // It stores fog visibility per grid cell and updates it during interaction.
 
 ## 5. External References
 ### Kristen
@@ -117,7 +113,7 @@ Mark each AI-assisted section in the actual code, for example:
   - **HTML5 Canvas — shadowBlur:** [https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/shadowBlur](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/shadowBlur) Referenced to create the base global glow for the celestial bodies and the moon phase. I later optimized its usage by blending it with native `p5.js` geometric loops (`ellipse()`) to prevent frame rate drops.
   - **Responsive Math Logic:** Adapted standard responsive design principles using `Math.min()` to dynamically calculate the maximum safe radius, ensuring the celestial bodies stay within canvas bounds regardless of the screen ratio.
 
-- **Yuanze Lin:** 
+### **Yuanze Lin:** 
 -The audios references：
 - Singing bowl.mp3
 https://pixabay.com/sound-effects/film-special-effects-singing-bowl-hit-3-33366/
@@ -128,7 +124,7 @@ https://pixabay.com/sound-effects/musical-chinese-kit-231719/
 Wind Chimes.mp3
 https://pixabay.com/sound-effects/film-special-effects-wind-chimes-no-background-noise-57238/
   
-- **JunYu:** Junyu Cai
+### **JunYu:** Junyu Cai
 - Visual inspiration: The Changxin Palace Lantern, an ancient Chinese bronze lamp, inspired the lantern-bearing cursor. I prepared the two character images used for its sleeping and awakened states.
 - p5.js — mouseX: Mouse position is used to move the lantern-bearing figure.
 - p5.js — tint(): Image transparency is used to blend between the two character states.
@@ -150,12 +146,12 @@ Add source comments beside referenced or adapted code, for example:
   2. **Awaken the World:** Move your mouse to clear the fog. As the fog dissipates, the Sun and Moon cycle will smoothly fade out to reveal the hidden world beneath.
   3. **Explore the Hidden Flow:** Once the fog is cleared, observe the continuous 10-second environmental cycle: the stylized flowing waves at the bottom, the glowing and pulsing fruits on the divine trees, and the rhythmic breathing halo of the bronze bell.
 
-- **Yuanze Lin:** 1.Move the mouse to wake up the scroll: The clouds gradually clear, revealing a pair of gray, still dragons. 
+### **Yuanze Lin:** 1.Move the mouse to wake up the scroll: The clouds gradually clear, revealing a pair of gray, still dragons. 
 
 2.Click on the celestial bell to trigger sounds: The first click plays a singing bowl sound, turning the dragons into color; the second click plays Chinese drums, making the dragons breathe and twist with the volume; the third click plays wind chimes, enhancing the dragons' twisting, while they slowly rotate and revolve.
 
 3.Keep clicking or wait: Clicking again in the third stage will continue the sounds and movements; if you don’t click for 10 seconds, the sounds fade out, the dragons return to gray and still, and the next interaction starts over.
-- **JunYu:** — Interactive Lantern Cursor
+### **JunYu:** — Interactive Lantern Cursor
 1. Move the mouse across the artwork. The lantern-bearing figure follows the cursor and gradually changes from dark bronze and blue light to gold and yellow light over about five seconds.
 2. Observe the small glowing centre and light particles around the lantern.
 3. Stop moving the mouse for ten seconds. The figure slowly returns to its sleeping state. The bell and dragons are separate interactions handled by other modules.
