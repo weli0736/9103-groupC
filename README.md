@@ -72,8 +72,7 @@ Use a radial gradient, a small glowing centre, and moving particles to change th
 | Kristen | Heavenly fog and cloud patterns / `perlin-noise.js` | Slowly reveals golden cloud patterns through mouse movement and restores fog when idle. |
 | Haocheng Gong | Global control & Time-based visuals | sketch.js provides global isIdle state and manages the layer rendering order. timebase-1.js renders the massive Sun and Moon cycle above the fog (fading out when cleared). timebase-2.js renders the background elements, flowing waves, pulsing fruits, and bell glow beneath the fog.|
 | Yuanze Lin | Dragon pattern changes and interactive audio / audio-change.js | The user can play three sounds in order by clicking the clock, switch between the dragon's four states, and if they don't click for over ten seconds, it goes back to the default state.
-| JunYu |Designed the lantern-bearing character and two visual states; implemented and tested cursor-following, blue-to-gold light, particles, and idle transition in user-input.js.
-
+| JunYu |nteractive Lantern Cursor / user-input.js | Uses mouse movement to control the lantern-bearing character. Smoothly changes between dark and gold images, with blue and yellow lighting effects and moving particles. Returns to the sleeping state after ten seconds without interaction.
 ## 4. AI Acknowledgement
 ### Kristen
 I used **Claude** to help write fog rendering, reveal masks, reveal-speed control, and organise parameters.
