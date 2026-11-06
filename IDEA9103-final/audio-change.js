@@ -1,6 +1,5 @@
 // YUANZE: Click to trigger audio, color, breathing, and slow orbiting and rotation. Repeated clicks extend state 3; 10 seconds without a click restores the stone state.
-// Keep the five existing entry points used by sketch.js; all state is encapsulated in this file.
-// Junyu: After useExternalClicks(true), call YuanzeAudio.playSound(1/2/3) in the click handler.
+// Keep the entry points used by sketch.js; all state is encapsulated in this file.
 // Haocheng: Call YuanzeAudio.setIdle(boolean) to control the shared idle state.
 // Use the recordings in music; open the page through Live Server to load audio files.
 (() => {
@@ -72,8 +71,8 @@
 
   let canvasElement, initialized = false;
   let lastActivity = 0, hasMoved = false, idle = true;
-  let externalIdle = false, externalClicks = false;
-  let soundType = 0, lastSoundType = 0;
+  let externalIdle = false;
+  let soundType = 0;
   let colorMix = 0, dragonLevel = 0, dragonScale = 1, dragonRotation = 0;
   let motionStartedAt = null;
   let puppetStrength = 0, puppetTime = 0;
@@ -105,7 +104,6 @@
 
   function resetAudioState() {
     soundType = 0; // Return to the initial grayscale, stationary state; the next click starts with sound 1.
-    lastSoundType = 0;
     lastClickAt = null;
     resetDragons();
     stopVoices(FADE_SECONDS);
@@ -121,7 +119,6 @@
     lastActivity = performance.now();
     if (!externalIdle) changeIdle(false);
     if (moved) hasMoved = true;
-    window.dispatchEvent(new CustomEvent('story:activity', { detail: { moved } }));
   }
 
   // Hit area of the heavenly bell in the background, excluding its halo; canvas coordinates account for scaling.
@@ -138,7 +135,6 @@
       if (event.target === canvasElement) noteActivity(true);
     });
     canvasElement?.addEventListener('click', event => {
-      if (externalClicks) return;
       const bounds = canvasElement.getBoundingClientRect();
       if (bounds.width <= 0 || bounds.height <= 0) return;
       const x = (event.clientX - bounds.left) * width / bounds.width;
@@ -146,17 +142,14 @@
       if (!isBellHit(x, y)) return;
       updateIdle();
       noteActivity(true);
-      playSound(Math.min(lastSoundType + 1, 3));
-    });
-    window.addEventListener('story:idle', event => {
-      if (typeof event.detail?.isIdle === 'boolean') setIdle(event.detail.isIdle);
+      playSound(Math.min(soundType + 1, 3));
     });
     loadDragon('photo/dragon L.png', DRAGON_PINS.left, DRAGON_LIMBS.left, DRAGON_TORSO_PATHS.left, value => { leftDragon = value; });
     loadDragon('photo/dragon R.png', DRAGON_PINS.right, DRAGON_LIMBS.right, DRAGON_TORSO_PATHS.right, value => { rightDragon = value; });
     // Download and decode audio in advance so the first click does not wait for the entire file to load.
     SOUND_FILES.forEach((_, i) => {
       loadSoundBuffer(i + 1).catch(() => {
-        audioMessage = '音频加载失败，请用 Live Server 打开，并检查 music 文件夹。';
+        audioMessage = 'Audio could not be loaded. Open the page with Live Server and check the music folder.';
       });
     });
   }
@@ -207,7 +200,7 @@
       }
       img.updatePixels();
       save({ color: img, gray, puppet: createPuppetMesh(pins, limbs, torsoPath) });
-    }, () => { audioMessage = '龙图片加载失败，请检查 photo 文件夹。'; });
+    }, () => { audioMessage = 'Dragon images could not be loaded. Check the photo folder.'; });
   }
 
   // Moving least squares (MLS) similarity deformation: green control points move the local mesh while preserving dragon scale and head shapes.
@@ -318,7 +311,7 @@
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = 1024;
     const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, preserveDrawingBuffer: true, antialias: true });
-    if (!gl) throw new Error('无法创建龙的变形网格');
+    if (!gl) throw new Error('Could not create the dragon deformation mesh');
     const renderLimit = Math.min(2048, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE),
       gl.getParameter(gl.MAX_VIEWPORT_DIMS)[0], gl.getParameter(gl.MAX_VIEWPORT_DIMS)[1]);
     const textureLimit = Math.min(4096, gl.getParameter(gl.MAX_TEXTURE_SIZE));
@@ -395,7 +388,7 @@
     }
     return {
       draw(dragon, w, h) {
-        if (gl.isContextLost()) throw new Error('龙的变形网格上下文丢失');
+        if (gl.isContextLost()) throw new Error('The dragon mesh WebGL context was lost');
         // Account for high pixel density, breathing enlargement, and mesh padding to avoid stretching a low-resolution render.
         const density = Math.max(1, pixelDensity());
         const required = Math.max(w, h) * density * DRAGON_MAX_SCALE / PUPPET_VIEW_INSET;
@@ -480,7 +473,7 @@
   function ensureAudio() {
     if (!audioCtx) {
       const Context = window.AudioContext || window.webkitAudioContext;
-      if (!Context) throw new Error('此浏览器不支持音频分析。');
+      if (!Context) throw new Error('This browser does not support audio analysis.');
       audioCtx = new Context();
       masterGain = audioCtx.createGain();
       masterGain.gain.value = 0;
@@ -520,18 +513,17 @@
     updateIdle();
     if (externalIdle && idle) return false;
     const continuingThirdState = soundType === 3;
-    if (continuingThirdState) type = 3; // Stay in state 3 even if the external click module continues passing 1.
+    if (continuingThirdState) type = 3;
     noteActivity(false);
     lastClickAt = performance.now();
     hasMoved = true; // Show the current phase correctly when an external module triggers audio directly.
     soundType = type;
-    lastSoundType = type;
     if (!continuingThirdState) {
       resetDragons();
       if (type >= 2) motionStartedAt = performance.now();
     }
     if (type === 1) {
-      // When starting sound 1, including a 3-to-1 cycle, reset to grayscale, restore size and rotation immediately, then fade back to color.
+      // Reset to grayscale before fading back to color for sound 1.
       colorMix = 0;
     }
     return type;
@@ -541,7 +533,7 @@
     if (!soundBuffers.has(type)) {
       const loading = (async () => {
         const response = await fetch(encodeURI(SOUND_FILES[type - 1]));
-        if (!response.ok) throw new Error('无法加载音频：' + SOUND_FILES[type - 1]);
+        if (!response.ok) throw new Error('Could not load audio: ' + SOUND_FILES[type - 1]);
         const bytes = await response.arrayBuffer();
         return ensureAudio().decodeAudioData(bytes);
       })();
@@ -583,7 +575,7 @@
       activeChant.endsAt = now + SOUND_DURATION_SECONDS;
       activeChant.sources[0].stop(activeChant.endsAt);
       fadeMaster(MAX_VOLUME, 0.08);
-      audioCtx.resume().catch(() => { audioMessage = '请再次点击天钟开启声音。'; });
+      audioCtx.resume().catch(() => { audioMessage = 'Click the Heavenly Bell again to enable audio.'; });
       return;
     }
     stopVoices(0.12);
@@ -592,7 +584,7 @@
       const context = ensureAudio();
       // Call resume directly from the user click, before waiting for the file download.
       const resumed = context.resume();
-      audioMessage = '正在加载声音…';
+      audioMessage = 'Loading audio…';
       const [buffer] = await Promise.all([loadSoundBuffer(type), resumed]);
       updateIdle();
       if (request !== playRequest || idle) return;
@@ -623,8 +615,8 @@
       source.stop(now + duration);
       audioMessage = '';
     } catch (error) {
-      if (request === playRequest) audioMessage = '声音播放失败，请检查音频文件并用 Live Server 打开。';
-      console.error('音频播放失败：', error);
+      if (request === playRequest) audioMessage = 'Audio playback failed. Check the audio files and open the page with Live Server.';
+      console.error('Audio playback failed:', error);
     }
   }
 
@@ -697,7 +689,7 @@
         return;
       } catch (error) {
         puppetUnavailable = true; // If WebGL is unavailable, retain the original images, audio, and rotation.
-        console.warn('双龙网格变形未启用：', error);
+        console.warn('Dragon mesh animation is unavailable:', error);
       }
     }
     drawDragonOutline(dragon.gray.canvas, -w / 2, -h / 2, w, h);
@@ -716,11 +708,11 @@
   function drawMusicHint() {
     const hint = document.getElementById('audio-story-hint');
     if (!hint) return;
-    const labels = ['玉磬 · 唤醒色彩', '战鼓 · 注入心跳', '梵音 · 龙腾盘旋'];
+    const labels = ['Jade Chime · Awaken the Colors', 'War Drum · Bring the Heartbeat to Life', 'Sacred Chant · Let the Dragons Soar'];
     hint.textContent = audioMessage || (idle || !hasMoved
-      ? '移动鼠标唤醒画卷，再点击天钟聆听'
-      : soundType === 0 ? '点击天钟：玉磬 → 战鼓 → 梵音'
-        : `${labels[soundType - 1]} · ${soundType === 3 ? '再次点击天钟延续，10 秒不点击天钟恢复初始状态' : '再次点击天钟切换'}`);
+      ? 'Move your mouse to awaken the painting, then click the Heavenly Bell to listen'
+      : soundType === 0 ? 'Click the Heavenly Bell: Jade Chime → War Drum → Sacred Chant'
+        : `${labels[soundType - 1]} · ${soundType === 3 ? 'Click the Heavenly Bell again to continue; 10 seconds without a click resets the scene' : 'Click the Heavenly Bell again to switch sounds'}`);
   }
 
   window.setupAudioChange = setupAudioChange;
@@ -728,20 +720,7 @@
   window.updateMusic = updateMusic;
   window.drawMusicHint = drawMusicHint;
   window.YuanzeAudio = {
-    playSound, setIdle, isBellHit,
-    useExternalClicks(value = true) { externalClicks = Boolean(value); },
-    // Create external audio sources in this AudioContext and route them only through connectSource to avoid duplicate playback.
-    getAudioContext: ensureAudio,
-    connectSource(node) { ensureAudio(); node.connect(masterGain); },
-    notifySound(type) {
-      if (!beginSound(type)) return;
-      try {
-        ensureAudio().resume().catch(() => { audioMessage = '请点击天钟开启声音。'; });
-        stopVoices(0.12);
-        fadeMaster(MAX_VOLUME, 0.08);
-      } catch (error) { audioMessage = error.message; }
-    },
-    getState() { return { isIdle: idle, soundType, colorMix, scale: dragonScale, rotation: dragonRotation, level: dragonLevel }; }
+    setIdle, isBellHit
   };
 })();
 
