@@ -18,7 +18,7 @@ The experience follows 5 connected states:
 - **Kristen Li:** Chinese cloud motifs, mist in landscape paintings, and soft  moonlight inspired the fog and golden cloud particles. The cloud guide image comes from《中国纹样全集》, accessed through [Pinterest](https://ch.pinterest.com/pin/5488830777107015/).
 - **Haocheng Gong:** My visual design is deeply inspired by the mythical elements of the Mawangdui silk painting and ancient Chinese cosmology. The Golden Crow (Jinwu) and Jade Rabbit (Yutu) represent the eternal cycle of the sun and moon. The glowing bronze bell and pulsing tree fruits represent the dormant energy of heaven waiting to be awakened.
 - **Yuanze Lin:** [Add your specific inspirations and their influence.]
-- **Junyu Cai:** [Add your specific inspirations and their influence.]
+- **Junyu Cai:**I was inspired by the Changxin Palace Lantern, an ancient Chinese bronze lamp. I designed a lantern-bearing figure as the mouse cursor to connect the viewer directly with the artwork. Its change from dark, aged bronze to warm gold represents the artwork waking up when someone pays attention to it.
 ## 2. Techniques
 The project uses p5.js. `sketch.js` coordinates the main scene. Each mechanic responds to shared interaction and idle states.
 
@@ -32,11 +32,12 @@ The project uses p5.js. `sketch.js` coordinates the main scene. Each mechanic re
 **Key decision:** Splitting the time-based visuals into two separate files (`timebase-1` and `timebase-2`) allows the Perlin noise fog to perfectly sandwich the environment. Calculating the dynamic safe radius ensures the layout adapts flawlessly without clipping the celestial bodies.
 
 ### User Input — Junyu Cai
-- Read mouse movement to activate the lantern and reset inactivity.
-- Use `lerpColor()` to blend the lantern from cold blue to warm yellow, while expanding its glow.
-- Use `mousePressed()` to cycle through three sounds: jade chime, war drum, and chant.
+Use two aligned PNG images to show the lantern bearer in a dark, aged state and a warm gold state. Crossfade them by changing image opacity.
+Read the mouse position to move the figure, with the mouse anchored at the figure's waist. Use smoothing so the figure follows naturally.
+Read the shared isIdle state from sketch.js. Mouse activity gradually wakes the figure over about five seconds; after ten seconds without activity, it returns to the sleeping state.
+Use a radial gradient, a small glowing centre, and moving particles to change the lantern light from soft blue to warm yellow.
 
-**Key decision:** Movement reveals the scene; clicks activate sound and dragon responses.
+**Key decision:** he lantern replaces the normal mouse cursor, making the viewer part of the artwork. Bell clicks and dragon audio effects are handled by the main sketch and Yuanze's audio module, rather than by user-input.js.
 
 ### Perlin Noise — Kristen Li
 - Use Perlin noise and domain warping to create flowing fog.
@@ -71,7 +72,7 @@ The project uses p5.js. `sketch.js` coordinates the main scene. Each mechanic re
 | Kristen | Heavenly fog and cloud patterns / `perlin-noise.js` | Slowly reveals golden cloud patterns through mouse movement and restores fog when idle. |
 | Haocheng Gong | Global control & Time-based visuals | sketch.js provides global isIdle state and manages the layer rendering order. timebase-1.js renders the massive Sun and Moon cycle above the fog (fading out when cleared). timebase-2.js renders the background elements, flowing waves, pulsing fruits, and bell glow beneath the fog.|
 | Yuanze Lin | [Mechanic / file] | [Describe what your mechanic does.] |
-| JunYu | [Mechanic / file] | [Describe what your mechanic does.] |
+| JunYu |Designed the lantern-bearing character and two visual states; implemented and tested cursor-following, blue-to-gold light, particles, and idle transition in user-input.js.
 
 ## 4. AI Acknowledgement
 ### Kristen
@@ -91,7 +92,10 @@ It also generated the `Math.min()` logic to calculate a dynamic safe radius (ens
 
 - **Yuanze Lin:** [Name the AI tool, its purpose, and how the assisted code works. Write “None” if unused.]
 
-- **JunYu:** [Name the AI tool, its purpose, and how the assisted code works. Write “None” if unused.]
+- **JunYu:** Junyu Cai
+I used ChatGPT to help write, organise, and debug JavaScript for user-input.js and to help explain the code. AI assistance was used for mouse-following, image crossfading, smooth transitions, glow gradients, and particle effects. The code uses mouse coordinates and the shared isIdle state to update the lantern each frame.
+
+I developed the interaction concept, prepared the two character images, chose the visual effects, adjusted the timing, size, colour and light settings, and tested the results in VS Code. ChatGPT also helped edit the wording of my README sections.
 
 Mark each AI-assisted section in the actual code, for example:
 
@@ -115,8 +119,11 @@ Mark each AI-assisted section in the actual code, for example:
 
 - **Yuanze Lin:** [Add source links and explain what you used or adapted.]
   
-- **JunYu:** [Add source links and explain what you used or adapted.]
-
+- **JunYu:** Junyu Cai
+- Visual inspiration: The Changxin Palace Lantern, an ancient Chinese bronze lamp, inspired the lantern-bearing cursor. I prepared the two character images used for its sleeping and awakened states.
+- p5.js — mouseX: Mouse position is used to move the lantern-bearing figure.
+- p5.js — tint(): Image transparency is used to blend between the two character states.
+- MDN — CanvasRenderingContext2D.createRadialGradient(): A radial gradient creates the soft light around the lantern. These are technical API references rather than copied artwork or code.
 Add source comments beside referenced or adapted code, for example:
 
     // [REF] Domain warping: https://iquilezles.org/articles/warp/
@@ -135,7 +142,10 @@ Add source comments beside referenced or adapted code, for example:
   3. **Explore the Hidden Flow:** Once the fog is cleared, observe the continuous 10-second environmental cycle: the stylized flowing waves at the bottom, the glowing and pulsing fruits on the divine trees, and the rhythmic breathing halo of the bronze bell.
 
 - **Yuanze Lin:** [Explain how users interact with your mechanic.]
-- **JunYu:** [Explain how users interact with your mechanic.]
+- **JunYu:** — Interactive Lantern Cursor
+1. Move the mouse across the artwork. The lantern-bearing figure follows the cursor and gradually changes from dark bronze and blue light to gold and yellow light over about five seconds.
+2. Observe the small glowing centre and light particles around the lantern.
+3. Stop moving the mouse for ten seconds. The figure slowly returns to its sleeping state. The bell and dragons are separate interactions handled by other modules.
 
 ## 7. Code Comments
 Each member must:
